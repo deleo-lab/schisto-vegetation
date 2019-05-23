@@ -190,16 +190,14 @@ def read_images():
 
         print(image_filename + ' read')
 
-def train(model):
-    model_name_generated = 'unet_3cW_0.hdf5'
+def train(model, model_filename):
     for i in range (0,N_EPOCHS):        
-        model_checkpoint = ModelCheckpoint(model_name_generated, monitor='val_loss', save_best_only=True)
+        model_checkpoint = ModelCheckpoint(model_filename, monitor='val_loss', save_best_only=True)
         #csv_logger = CSVLogger('log_unet.csv', append=True, separator=';')
         #tensorboard = TensorBoard(log_dir='./tensorboard_unet/', write_graph=True, write_images=True)
 
         x_train, y_train = get_patches(X_DICT_TRAIN, Y_DICT_TRAIN, n_patches=TRAIN_SZ, sz=PATCH_SZ) 
         x_val, y_val = get_patches(X_DICT_VALIDATION, Y_DICT_VALIDATION, n_patches=VAL_SZ, sz=PATCH_SZ)
-        #model_checkpoint = ModelCheckpoint(model_name_generated, monitor='val_loss', save_best_only=True) 
         model.fit(x_train, y_train, batch_size=BATCH_SIZE, epochs=1,
                   verbose=2, #shuffle=True,
                   #callbacks=[model_checkpoint, csv_logger, tensorboard],
@@ -208,9 +206,10 @@ def train(model):
         del x_train, y_train
         print ("Finished epoch %d" % i)
     
-        model.save_weights(model_name_generated)
+        model.save(model_filename)
     
 
 read_images()
 model = unet(STARTING_LR, num_classes)
-train(model)
+model_filename = "unet_3cW_0.h5"
+train(model, model_filename)
