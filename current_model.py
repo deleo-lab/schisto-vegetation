@@ -1,6 +1,7 @@
-import numpy as np 
+import argparse
 import os
 import random
+
 import skimage.io as io
 import skimage.transform as trans
 import numpy as np
@@ -212,9 +213,19 @@ def train(model, model_filename, train_set, val_set):
         print ("Finished epoch %d" % i)
     
         model.save(model_filename)
-    
 
-train_set, val_set = read_images()
-model = unet(STARTING_LR, num_classes)
-model_filename = "unet_3cW_0.h5"
-train(model, model_filename, train_set, val_set)
+def parse_args():
+    parser = argparse.ArgumentParser(description='Process some integers.')
+    parser.add_argument('--model_name', default="unet_3cW_0.h5",
+                        help='Filename for saving the model')
+    args = parser.parse_args()
+    return args
+    
+        
+if __name__ == '__main__':
+    args = parse_args()
+    
+    train_set, val_set = read_images()
+    model = unet(STARTING_LR, num_classes)
+    model_filename = args.model_name
+    train(model, model_filename, train_set, val_set)
