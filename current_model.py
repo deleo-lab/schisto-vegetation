@@ -8,7 +8,6 @@ import numpy as np
 
 import tensorflow as tf
 
-from tensorflow.keras.models import *
 from tensorflow.keras.layers import *
 from tensorflow.keras.optimizers import *
 from tensorflow.keras.callbacks import ModelCheckpoint, LearningRateScheduler
@@ -99,7 +98,7 @@ def get_patches(dataset, n_patches, sz):
     #print('Generated {} patches'.format(total_patches))
     return np.array(x), np.array(y)
 
-def unet(learning_rate,classes, pretrained_weights = None, input_size = (256,256,8)):
+def unet(learning_rate, classes, input_size = (256,256,8)):
     inputs = Input(input_size)
     conv1 = Conv2D(32, (3, 3), activation = 'elu', padding = 'same', kernel_initializer = 'he_normal')(inputs)
     conv1 = Conv2D(32, (3, 3),activation = 'elu', padding = 'same', kernel_initializer = 'he_normal')(conv1)
@@ -148,9 +147,6 @@ def unet(learning_rate,classes, pretrained_weights = None, input_size = (256,256
     model.compile(optimizer = Adam(lr = learning_rate), loss = 'binary_crossentropy', metrics = ['accuracy'])
     
     #model.summary()
-
-    if(pretrained_weights):
-    	model.load_weights(pretrained_weights)
 
     return model
 
@@ -221,12 +217,20 @@ def train(model, model_filename, train_set, val_set):
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Process some integers.')
-    parser.add_argument('--model_name', default="unet_3cW_0.h5",
+    parser.add_argument('--save_model', default="unet_3cW_0.h5",
                         help='Filename for saving the model')
+    parser.add_argument('--load_model', default=None,
+                        help=('Filename for loading a model, either as '
+                              'a starting point for training or for testing'))
     parser.add_argument('--separate_ceratophyllum',
                         dest='separate_ceratophyllum',
                         default=False, action='store_true',
                         help='Separate classes for emergent and ceratophyllum')
+    parser.add_argument('--train', dest='train',
+                        default=True, action='store_true',
+                        help='Train the model (default)')
+    parser.add_argument('--no_train', dest='train',
+                        action='store_false', help="Don't train the model")
     args = parser.parse_args()
     return args
     
@@ -234,12 +238,20 @@ def parse_args():
 if __name__ == '__main__':
     args = parse_args()
 
-    if args.separate_ceratophyllum:
-        num_classes = 4
+    if args.load_model:
+        model = tf.keras.models.load_model(args.load_model)
+        output = model.outputs[0]
+        num_classes = output.shape[-1]
+        print("Loaded model %s.  Number of classes: %d" %
+              (args.load_model, num_classes))
     else:
-        num_classes = 3
+        if args.separate_ceratophyllum:
+            num_classes = 4
+        else:
+            num_classes = 3
+
+        model = unet(STARTING_LR, num_classes)
         
-    train_set, val_set = read_images(num_classes)
-    model = unet(STARTING_LR, num_classes)
-    model_filename = args.model_name
-    train(model, model_filename, train_set, val_set)
+    if args.train:
+        train_set, val_set = read_images(num_classes)
+        train(model, args.save_model, train_set, val_set)
