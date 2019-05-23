@@ -31,7 +31,6 @@ land_mask = '%s/training_set/land_mask_set3/' % HOME
 emergent_mask = '%s/training_set/emergent_mask_set3/' % HOME
 ceratophyllum_mask = '%s/training_set/cera_mask_set3/' % HOME
 
-num_classes = 3
 num_training_images = 50
 
 STARTING_LR = 4e-5
@@ -155,7 +154,7 @@ def unet(learning_rate,classes, pretrained_weights = None, input_size = (256,256
 
     return model
 
-def read_images():
+def read_images(num_classes):
     X_DICT_TRAIN = dict()
     Y_DICT_TRAIN = dict()
     X_DICT_VALIDATION = dict()
@@ -174,12 +173,18 @@ def read_images():
         mask_land = io.imread(land_mask + '%d.png'%i)
         mask_emerg = io.imread(emergent_mask +'%d.png'%i)
         mask_cera = io.imread(ceratophyllum_mask + '%d.png'%i)
-        
-        mask[:,:,2] = mask_water[:,:]
-        mask[:,:,1] = mask_land[:,:]
-        mask[:,:,0] = mask_emerg[:,:]
-        mask[:,:,0] += mask_cera[:,:]
-        
+
+        if num_classes == 3:
+            mask[:,:,2] = mask_water[:,:]
+            mask[:,:,1] = mask_land[:,:]
+            mask[:,:,0] = mask_emerg[:,:]
+            mask[:,:,0] += mask_cera[:,:]
+        elif num_classes == 4:
+            mask[:,:,3] = mask_water[:,:]
+            mask[:,:,2] = mask_land[:,:]
+            mask[:,:,1] = mask_emerg[:,:]
+            mask[:,:,0] = mask_cera[:,:]            
+            
         mask = mask/255        
 
         # CHANGE: use 80% of images for train, 20% for validation
@@ -218,14 +223,23 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Process some integers.')
     parser.add_argument('--model_name', default="unet_3cW_0.h5",
                         help='Filename for saving the model')
+    parser.add_argument('--separate_ceratophyllum',
+                        dest='separate_ceratophyllum',
+                        default=False, action='store_true',
+                        help='Separate classes for emergent and ceratophyllum')
     args = parser.parse_args()
     return args
     
         
 if __name__ == '__main__':
     args = parse_args()
-    
-    train_set, val_set = read_images()
+
+    if args.separate_ceratophyllum:
+        num_classes = 4
+    else:
+        num_classes = 3
+        
+    train_set, val_set = read_images(num_classes)
     model = unet(STARTING_LR, num_classes)
     model_filename = args.model_name
     train(model, model_filename, train_set, val_set)
