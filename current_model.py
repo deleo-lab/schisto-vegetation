@@ -32,10 +32,6 @@ ceratophyllum_mask = '%s/training_set/cera_mask_set3/' % HOME
 
 num_classes = 3
 num_training_images = 50
-X_DICT_TRAIN = dict()
-Y_DICT_TRAIN = dict()
-X_DICT_VALIDATION = dict()
-Y_DICT_VALIDATION = dict()
 
 STARTING_LR = 4e-5
 
@@ -87,7 +83,8 @@ def get_rand_patch(img, mask, sz):
     return patch_img, patch_mask
 
 
-def get_patches(x_dict, y_dict, n_patches, sz):
+def get_patches(dataset, n_patches, sz):
+    x_dict, y_dict = dataset
     x = list()
     y = list()
     total_patches = 0
@@ -158,6 +155,10 @@ def unet(learning_rate,classes, pretrained_weights = None, input_size = (256,256
     return model
 
 def read_images():
+    X_DICT_TRAIN = dict()
+    Y_DICT_TRAIN = dict()
+    X_DICT_VALIDATION = dict()
+    Y_DICT_VALIDATION = dict()
     for i in range (0,num_training_images):
         # TODO: use the directory listing directly rather than
         # expecting hardcoded names
@@ -190,14 +191,18 @@ def read_images():
 
         print(image_filename + ' read')
 
-def train(model, model_filename):
+    train_set = (X_DICT_TRAIN, Y_DICT_TRAIN)
+    val_set = (X_DICT_VALIDATION, Y_DICT_VALIDATION)
+    return train_set, val_set
+    
+def train(model, model_filename, train_set, val_set):
     for i in range (0,N_EPOCHS):        
         model_checkpoint = ModelCheckpoint(model_filename, monitor='val_loss', save_best_only=True)
         #csv_logger = CSVLogger('log_unet.csv', append=True, separator=';')
         #tensorboard = TensorBoard(log_dir='./tensorboard_unet/', write_graph=True, write_images=True)
 
-        x_train, y_train = get_patches(X_DICT_TRAIN, Y_DICT_TRAIN, n_patches=TRAIN_SZ, sz=PATCH_SZ) 
-        x_val, y_val = get_patches(X_DICT_VALIDATION, Y_DICT_VALIDATION, n_patches=VAL_SZ, sz=PATCH_SZ)
+        x_train, y_train = get_patches(train_set, n_patches=TRAIN_SZ, sz=PATCH_SZ) 
+        x_val, y_val = get_patches(val_set, n_patches=VAL_SZ, sz=PATCH_SZ)
         model.fit(x_train, y_train, batch_size=BATCH_SIZE, epochs=1,
                   verbose=2, #shuffle=True,
                   #callbacks=[model_checkpoint, csv_logger, tensorboard],
@@ -209,7 +214,7 @@ def train(model, model_filename):
         model.save(model_filename)
     
 
-read_images()
+train_set, val_set = read_images()
 model = unet(STARTING_LR, num_classes)
 model_filename = "unet_3cW_0.h5"
-train(model, model_filename)
+train(model, model_filename, train_set, val_set)
