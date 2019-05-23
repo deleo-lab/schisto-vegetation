@@ -146,7 +146,7 @@ def unet(learning_rate,classes, pretrained_weights = None, input_size = (256,256
     conv9 = Conv2D(32, (3, 3),activation = 'elu', padding = 'same', kernel_initializer = 'he_normal')(conv9)
     conv10 = Conv2D(classes,1, activation = 'sigmoid')(conv9)
 
-    # CHANGE: typo in Model ffs
+    # CHANGE: typo in Model - keywords were inputs, outputs
     model = tf.keras.Model(inputs=inputs, outputs=conv10)
     model.compile(optimizer = Adam(lr = learning_rate), loss = 'binary_crossentropy', metrics = ['accuracy'])
     
