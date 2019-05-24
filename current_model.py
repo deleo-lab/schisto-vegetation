@@ -2,6 +2,7 @@ import argparse
 import os
 import random
 
+from PIL import Image
 import skimage.io as io
 import skimage.transform as trans
 import numpy as np
@@ -152,6 +153,25 @@ def unet(learning_rate, classes, input_size = (None, None, 8)):
 
     return model
 
+# try to map the visible channels to RGB
+SAT_TRANSFORM = np.array([[ 0,  0,  0, .4, .4, .2, 0, 0],
+                          [ 0, .3, .4, .3,  0,  0, 0, 0],
+                          [.3, .4, .3,  0,  0,  0, 0, 0]]).T
+
+GREY_TRANSFORM = np.array([0.299, 0.587, 0.114])
+
+def transform_rgb_image(image):
+    # TODO: get rid of /16
+    raw = image / 16
+    rgb = np.tensordot(raw, SAT_TRANSFORM, 1) / 2048
+    return rgb
+    
+def read_tif(image_filename):
+    # TODO: get rid of *16
+    img_m = io.imread(image_filename)
+    img_m = img_m*16   # TODO: convert 11 bit numbers to 16 bit?
+    return img_m
+
 def read_images(num_classes):
     X_DICT_TRAIN = dict()
     Y_DICT_TRAIN = dict()
@@ -161,8 +181,7 @@ def read_images(num_classes):
         # TODO: use the directory listing directly rather than
         # expecting hardcoded names
         image_filename = path_TIF + '%d.TIF' % i
-        img_m = io.imread(image_filename)
-        img_m = img_m*16   # TODO: convert 11 bit numbers to 16 bit?
+        img_m = read_tif(image_filename)
         
         #create 3d mask where each channel is the mask for a specific class
         mask = np.zeros((512,512,num_classes))
@@ -218,6 +237,42 @@ def train(model, model_filename, train_set, val_set):
     
         model.save(model_filename)
 
+def display_heat_map(model, filename):
+    test_image = read_tif(filename)
+    test_batch = np.expand_dims(test_image, axis=0)
+    prediction = model.predict(test_batch)
+
+    rgb_test_image = transform_rgb_image(test_image)
+    grey = np.tensordot(rgb_test_image, GREY_TRANSFORM, 1)
+    grey = np.expand_dims(grey, axis=2)
+    grey = grey - grey.min()
+    if grey.max() > 0.0:
+        grey = grey / grey.max()
+    else:
+        grey = grey + 1.0
+    grey = grey / 2.0 + 0.5
+
+    # grey is now from 0.5 to 1... a washed out greyscale version
+    # of the original image.  the purpose is to make something that
+    # can have blue...red...yellow heat map colors imposed on top
+
+    prediction = np.squeeze(prediction)[:, :, 0]
+    blue_prediction = np.maximum(0.4 - prediction, 0.0)
+    blue_prediction = np.sqrt(blue_prediction)
+    red_prediction = np.minimum(prediction / 0.4, 1.0)
+    red_prediction = np.sqrt(red_prediction)
+    green_prediction = np.maximum(np.minimum((prediction - 0.4) / 0.4, 1.0), 0)
+    heat_map = np.stack([red_prediction, green_prediction,
+                         blue_prediction], axis=2)
+
+    rgb = heat_map * grey
+
+    rgb = rgb * 256
+    rgb = np.array(rgb, dtype=np.int8)
+    im = Image.fromarray(rgb, "RGB")
+    im.show()
+
+    
 def parse_args():
     parser = argparse.ArgumentParser(description='Process some integers.')
     parser.add_argument('--save_model', default="unet_3cW_0.h5",
@@ -229,11 +284,16 @@ def parse_args():
                         dest='separate_ceratophyllum',
                         default=False, action='store_true',
                         help='Separate classes for emergent and ceratophyllum')
+
     parser.add_argument('--train', dest='train',
                         default=True, action='store_true',
                         help='Train the model (default)')
     parser.add_argument('--no_train', dest='train',
                         action='store_false', help="Don't train the model")
+
+    parser.add_argument('--heat_map', default=None,
+                        help='A file on which to run the model')
+                        
     args = parser.parse_args()
     return args
     
@@ -258,3 +318,7 @@ if __name__ == '__main__':
     if args.train:
         train_set, val_set = read_images(num_classes)
         train(model, args.save_model, train_set, val_set)
+
+    if args.heat_map:
+        print("Running model on %s" % args.heat_map)
+        display_heat_map(model, args.heat_map)
