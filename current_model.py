@@ -217,16 +217,30 @@ def read_images(num_classes):
     train_set = (X_DICT_TRAIN, Y_DICT_TRAIN)
     val_set = (X_DICT_VALIDATION, Y_DICT_VALIDATION)
     return train_set, val_set
+
+def stack_dataset(dataset):
+    x_dict, y_dict = dataset
+    X = []
+    Y = []
+    for k in x_dict.keys():
+        X.append(x_dict[k])
+        Y.append(y_dict[k])
+    return np.array(X), np.array(Y)
     
-def train(model, model_filename, train_set, val_set):
+
+def train(model, model_filename, train_set, val_set, args):
+    if not args.val_patches:
+        # TODO: stack earlier?  we may not actually need
+        # to keep the filenames, perhaps
+        x_val, y_val = stack_dataset(val_set)
     for i in range (0,N_EPOCHS):        
         model_checkpoint = ModelCheckpoint(model_filename, monitor='val_loss', save_best_only=True)
         #csv_logger = CSVLogger('log_unet.csv', append=True, separator=';')
         #tensorboard = TensorBoard(log_dir='./tensorboard_unet/', write_graph=True, write_images=True)
 
         x_train, y_train = get_patches(train_set, n_patches=TRAIN_SZ, sz=PATCH_SZ)
-        # TODO: validate over the entire validation set?  no need for patches
-        x_val, y_val = get_patches(val_set, n_patches=VAL_SZ, sz=PATCH_SZ)
+        if args.val_patches:
+            x_val, y_val = get_patches(val_set, n_patches=VAL_SZ, sz=PATCH_SZ)
         model.fit(x_train, y_train, batch_size=BATCH_SIZE, epochs=1,
                   verbose=2, #shuffle=True,
                   #callbacks=[model_checkpoint, csv_logger, tensorboard],
@@ -291,6 +305,13 @@ def parse_args():
     parser.add_argument('--no_train', dest='train',
                         action='store_false', help="Don't train the model")
 
+    parser.add_argument('--val_patches', dest='val_patches',
+                        default=True, action='store_true',
+                        help='Use patches from the val set (default)')
+    parser.add_argument('--no_val_patches', dest='val_patches',
+                        action='store_false',
+                        help="Use the entire block of validation data")
+
     parser.add_argument('--heat_map', default=None,
                         help='A file on which to run the model')
                         
@@ -317,7 +338,7 @@ if __name__ == '__main__':
         
     if args.train:
         train_set, val_set = read_images(num_classes)
-        train(model, args.save_model, train_set, val_set)
+        train(model, args.save_model, train_set, val_set, args)
 
     if args.heat_map:
         print("Running model on %s" % args.heat_map)
