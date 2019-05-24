@@ -98,7 +98,9 @@ def get_patches(dataset, n_patches, sz):
     #print('Generated {} patches'.format(total_patches))
     return np.array(x), np.array(y)
 
-def unet(learning_rate, classes, input_size = (256,256,8)):
+# CHANGE
+# Can represent variable input dimensions by None
+def unet(learning_rate, classes, input_size = (None, None, 8)):
     inputs = Input(input_size)
     conv1 = Conv2D(32, (3, 3), activation = 'elu', padding = 'same', kernel_initializer = 'he_normal')(inputs)
     conv1 = Conv2D(32, (3, 3),activation = 'elu', padding = 'same', kernel_initializer = 'he_normal')(conv1)
@@ -203,7 +205,8 @@ def train(model, model_filename, train_set, val_set):
         #csv_logger = CSVLogger('log_unet.csv', append=True, separator=';')
         #tensorboard = TensorBoard(log_dir='./tensorboard_unet/', write_graph=True, write_images=True)
 
-        x_train, y_train = get_patches(train_set, n_patches=TRAIN_SZ, sz=PATCH_SZ) 
+        x_train, y_train = get_patches(train_set, n_patches=TRAIN_SZ, sz=PATCH_SZ)
+        # TODO: validate over the entire validation set?  no need for patches
         x_val, y_val = get_patches(val_set, n_patches=VAL_SZ, sz=PATCH_SZ)
         model.fit(x_train, y_train, batch_size=BATCH_SIZE, epochs=1,
                   verbose=2, #shuffle=True,
