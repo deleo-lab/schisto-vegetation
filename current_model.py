@@ -35,25 +35,7 @@ num_training_images = 50
 
 STARTING_LR = 4e-5
 
-def get_rand_patch(img, mask, sz):
-    """
-    :param img: ndarray with shape (x_sz, y_sz, num_channels)
-    :param mask: binary ndarray with shape (x_sz, y_sz, num_classes)
-    :param sz: size of random patch
-    :return: patch with shape (sz, sz, num_channels)
-    """
-    assert len(img.shape) == 3
-    assert img.shape[0] >= sz
-    assert img.shape[1] >= sz
-    assert img.shape[0:2] == mask.shape[0:2]
-    xc = random.randint(0, img.shape[0] - sz)
-    yc = random.randint(0, img.shape[1] - sz)
-
-    patch_img = img[xc:(xc + sz), yc:(yc + sz)]
-    patch_mask = mask[xc:(xc + sz), yc:(yc + sz)]
-    
-    #adjusted for masks of size (512,512), no third dimension.
-    
+def random_transform(patch_img, patch_mask):    
     # Apply some random transformations
     random_transformation = np.random.randint(1,8)
     if random_transformation == 1:
@@ -79,6 +61,29 @@ def get_rand_patch(img, mask, sz):
         patch_mask = np.rot90(patch_mask, 3)
     else:
         pass
+    return patch_img, patch_mask
+    
+
+def get_rand_patch(img, mask, sz):
+    """
+    :param img: ndarray with shape (x_sz, y_sz, num_channels)
+    :param mask: binary ndarray with shape (x_sz, y_sz, num_classes)
+    :param sz: size of random patch
+    :return: patch with shape (sz, sz, num_channels)
+    """
+    assert len(img.shape) == 3
+    assert img.shape[0] >= sz
+    assert img.shape[1] >= sz
+    assert img.shape[0:2] == mask.shape[0:2]
+    xc = random.randint(0, img.shape[0] - sz)
+    yc = random.randint(0, img.shape[1] - sz)
+
+    patch_img = img[xc:(xc + sz), yc:(yc + sz)]
+    patch_mask = mask[xc:(xc + sz), yc:(yc + sz)]
+    
+    #adjusted for masks of size (512,512), no third dimension.
+
+    patch_img, patch_mask = random_transform(patch_img, patch_mask)
 
     return patch_img, patch_mask
 
