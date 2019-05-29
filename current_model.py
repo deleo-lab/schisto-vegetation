@@ -230,10 +230,6 @@ def stack_dataset(dataset):
     
 
 def train(model, model_filename, train_set, val_set, args):
-    root, ext = os.path.splitext(model_filename)
-    # TODO: possibly don't store all the models
-    checkpoint_filename = root + ".E{epoch:04d}-VAL{val_loss:05.2f}" + ext
-    
     # upweight ceratophyllum
     if args.separate_ceratophyllum:
         class_weight = [.8,.3,.1,.3]
@@ -245,7 +241,15 @@ def train(model, model_filename, train_set, val_set, args):
         # to keep the filenames, perhaps
         x_val, y_val = stack_dataset(val_set)
 
-    model_checkpoint = ModelCheckpoint(checkpoint_filename, monitor='val_loss', save_best_only=True)
+    if args.save_best_only:
+        checkpoint_filename = model_filename
+    else:
+        root, ext = os.path.splitext(model_filename)
+        checkpoint_filename = root + ".E{epoch:04d}-VAL{val_loss:05.2f}" + ext
+    
+    model_checkpoint = ModelCheckpoint(checkpoint_filename, monitor='val_loss',
+                                       save_best_only=args.save_best_only)
+    
     for i in range(0, N_EPOCHS):
         #csv_logger = CSVLogger('log_unet.csv', append=True, separator=';')
         #tensorboard = TensorBoard(log_dir='./tensorboard_unet/', write_graph=True, write_images=True)
@@ -262,8 +266,9 @@ def train(model, model_filename, train_set, val_set, args):
                   class_weight=class_weight)
         del x_train, y_train
         print ("Finished epoch %d" % i)
-    
-    model.save(model_filename)
+
+    if not args.save_best_only:
+        model.save(model_filename)
 
 def display_heat_map(model, filename):
     test_image = read_tif(filename)
@@ -330,6 +335,13 @@ def parse_args():
     parser.add_argument('--no_val_patches', dest='val_patches',
                         action='store_false',
                         help="Use the entire block of validation data")
+
+    parser.add_argument('--save_best_only', dest='save_best_only',
+                        default=True, action='store_true',
+                        help='Only save the best model when training, measured on val set')
+    parser.add_argument('--no_save_best_only', dest='save_best_only',
+                        action='store_false',
+                        help="Save all the models.  Gets quite expensive")
 
     parser.add_argument('--heat_map', default=None,
                         help='A file on which to run the model')
