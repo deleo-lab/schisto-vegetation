@@ -230,6 +230,12 @@ def stack_dataset(dataset):
     
 
 def train(model, model_filename, train_set, val_set, args):
+    # upweight ceratophyllum
+    if args.separate_ceratophyllum:
+        class_weight = [.8,.3,.1,.3]
+    else:
+        class_weight = [.8,.1,.3]
+
     if not args.val_patches:
         # TODO: stack earlier?  we may not actually need
         # to keep the filenames, perhaps
@@ -246,7 +252,7 @@ def train(model, model_filename, train_set, val_set, args):
                   verbose=2, #shuffle=True,
                   #callbacks=[model_checkpoint, csv_logger, tensorboard],
                   callbacks=[model_checkpoint],
-                  validation_data=(x_val, y_val),class_weight=[.8,.1,.3])
+                  validation_data=(x_val, y_val),class_weight=class_weight)
         del x_train, y_train
         print ("Finished epoch %d" % i)
     
