@@ -161,15 +161,11 @@ SAT_TRANSFORM = np.array([[ 0,  0,  0, .4, .4, .2, 0, 0],
 GREY_TRANSFORM = np.array([0.299, 0.587, 0.114])
 
 def transform_rgb_image(image):
-    # TODO: get rid of /16
-    raw = image / 16
-    rgb = np.tensordot(raw, SAT_TRANSFORM, 1) / 2048
+    rgb = np.tensordot(image, SAT_TRANSFORM, 1) / 2048
     return rgb
     
 def read_tif(image_filename):
-    # TODO: get rid of *16
     img_m = io.imread(image_filename)
-    img_m = img_m*16   # TODO: convert 11 bit numbers to 16 bit?
     return img_m
 
 def read_images(num_classes):
