@@ -230,6 +230,10 @@ def stack_dataset(dataset):
     
 
 def train(model, model_filename, train_set, val_set, args):
+    root, ext = os.path.splitext(model_filename)
+    # TODO: possibly don't store all the models
+    checkpoint_filename = root + ".E{epoch:04d}-VAL{val_loss:05.2f}" + ext
+    
     # upweight ceratophyllum
     if args.separate_ceratophyllum:
         class_weight = [.8,.3,.1,.3]
@@ -240,23 +244,26 @@ def train(model, model_filename, train_set, val_set, args):
         # TODO: stack earlier?  we may not actually need
         # to keep the filenames, perhaps
         x_val, y_val = stack_dataset(val_set)
-    for i in range (0,N_EPOCHS):        
-        model_checkpoint = ModelCheckpoint(model_filename, monitor='val_loss', save_best_only=True)
+
+    model_checkpoint = ModelCheckpoint(checkpoint_filename, monitor='val_loss', save_best_only=True)
+    for i in range(0, N_EPOCHS):
         #csv_logger = CSVLogger('log_unet.csv', append=True, separator=';')
         #tensorboard = TensorBoard(log_dir='./tensorboard_unet/', write_graph=True, write_images=True)
 
         x_train, y_train = get_patches(train_set, n_patches=TRAIN_SZ, sz=PATCH_SZ)
         if args.val_patches:
             x_val, y_val = get_patches(val_set, n_patches=VAL_SZ, sz=PATCH_SZ)
-        model.fit(x_train, y_train, batch_size=BATCH_SIZE, epochs=1,
+        model.fit(x_train, y_train, batch_size=BATCH_SIZE,
+                  epochs=1+i, initial_epoch=i,
                   verbose=2, #shuffle=True,
                   #callbacks=[model_checkpoint, csv_logger, tensorboard],
                   callbacks=[model_checkpoint],
-                  validation_data=(x_val, y_val),class_weight=class_weight)
+                  validation_data=(x_val, y_val),
+                  class_weight=class_weight)
         del x_train, y_train
         print ("Finished epoch %d" % i)
     
-        model.save(model_filename)
+    model.save(model_filename)
 
 def display_heat_map(model, filename):
     test_image = read_tif(filename)
