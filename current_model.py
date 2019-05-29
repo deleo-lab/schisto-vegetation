@@ -308,10 +308,15 @@ def parse_args():
     parser.add_argument('--load_model', default=None,
                         help=('Filename for loading a model, either as '
                               'a starting point for training or for testing'))
+
     parser.add_argument('--separate_ceratophyllum',
                         dest='separate_ceratophyllum',
-                        default=False, action='store_true',
+                        default=True, action='store_true',
                         help='Separate classes for emergent and ceratophyllum')
+    parser.add_argument('--no_separate_ceratophyllum',
+                        dest='separate_ceratophyllum',
+                        action='store_false',
+                        help='Combine classes for emergent and ceratophyllum')
 
     parser.add_argument('--train', dest='train',
                         default=True, action='store_true',
@@ -320,7 +325,7 @@ def parse_args():
                         action='store_false', help="Don't train the model")
 
     parser.add_argument('--val_patches', dest='val_patches',
-                        default=True, action='store_true',
+                        default=False, action='store_true',
                         help='Use patches from the val set (default)')
     parser.add_argument('--no_val_patches', dest='val_patches',
                         action='store_false',
@@ -331,10 +336,17 @@ def parse_args():
                         
     args = parser.parse_args()
     return args
-    
+
+def print_args(args):
+    args = vars(args)
+    keys = sorted(args.keys())
+    print('ARGS:')
+    for k in keys:
+        print('%s: %s' % (k, args[k]))
         
 if __name__ == '__main__':
     args = parse_args()
+    print_args(args)
 
     if args.load_model:
         model = tf.keras.models.load_model(args.load_model)
