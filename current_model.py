@@ -24,12 +24,11 @@ TRAIN_SZ = 50  # train size
 VAL_SZ = 15   # validation size
 N_EPOCHS = 500  #150
 
-HOME = "."
-path_TIF = '%s/training_set/8_bands_set3/' % HOME
-water_mask = '%s/training_set/water_mask_set3/' % HOME
-land_mask = '%s/training_set/land_mask_set3/' % HOME
-emergent_mask = '%s/training_set/emergent_mask_set3/' % HOME
-ceratophyllum_mask = '%s/training_set/cera_mask_set3/' % HOME
+PATH_TIF = '%s/8_bands_set3/'
+WATER_MASK = '%s/water_mask_set3/'
+LAND_MASK = '%s/land_mask_set3/'
+EMERGENT_MASK = '%s/emergent_mask_set3/'
+CERA_MASK = '%s/cera_mask_set3/'
 
 num_training_images = 50
 
@@ -185,7 +184,7 @@ def read_tif(image_filename):
     img_m = io.imread(image_filename)
     return img_m
 
-def read_images(num_classes):
+def read_images(num_classes, image_path):
     X_DICT_TRAIN = dict()
     Y_DICT_TRAIN = dict()
     X_DICT_VALIDATION = dict()
@@ -193,16 +192,16 @@ def read_images(num_classes):
     for i in range (0,num_training_images):
         # TODO: use the directory listing directly rather than
         # expecting hardcoded names
-        image_filename = path_TIF + '%d.TIF' % i
+        image_filename = PATH_TIF % image_path + '%d.TIF' % i
         img_m = read_tif(image_filename)
         
         #create 3d mask where each channel is the mask for a specific class
         mask = np.zeros((512,512,num_classes))
         
-        mask_water = io.imread(water_mask + '%d.png'%i)
-        mask_land = io.imread(land_mask + '%d.png'%i)
-        mask_emerg = io.imread(emergent_mask +'%d.png'%i)
-        mask_cera = io.imread(ceratophyllum_mask + '%d.png'%i)
+        mask_water = io.imread(WATER_MASK % image_path + '%d.png'%i)
+        mask_land = io.imread(LAND_MASK % image_path + '%d.png'%i)
+        mask_emerg = io.imread(EMERGENT_MASK % image_path +'%d.png'%i)
+        mask_cera = io.imread(CERA_MASK % image_path + '%d.png'%i)
 
         if num_classes == 3:
             mask[:,:,2] = mask_water[:,:]
@@ -225,7 +224,7 @@ def read_images(num_classes):
             X_DICT_VALIDATION[i] = img_m
             Y_DICT_VALIDATION[i] = mask
 
-        print(image_filename + ' read')
+        print('read ' + image_filename)
 
     train_set = (X_DICT_TRAIN, Y_DICT_TRAIN)
     val_set = (X_DICT_VALIDATION, Y_DICT_VALIDATION)
@@ -357,7 +356,10 @@ def parse_args():
 
     parser.add_argument('--heat_map', default=None,
                         help='A file on which to run the model')
-                        
+
+    parser.add_argument('--training_home', default='c:/Users/horat/Documents/hai/schisto/training_set',
+                        help='Where to get the training data')
+    
     args = parser.parse_args()
     return args
 
@@ -387,7 +389,7 @@ if __name__ == '__main__':
         model = unet(STARTING_LR, num_classes)
         
     if args.train:
-        train_set, val_set = read_images(num_classes)
+        train_set, val_set = read_images(num_classes, args.training_home)
         train(model, args.save_model, train_set, val_set, args)
 
     if args.heat_map:
