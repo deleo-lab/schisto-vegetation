@@ -104,10 +104,9 @@ def get_patches(dataset, n_patches, sz):
     #print('Generated {} patches'.format(total_patches))
     return np.array(x), np.array(y)
 
-# CHANGE
-# Can represent variable input dimensions by None
-def unet(learning_rate, classes, input_size = (None, None, 8)):
-    inputs = Input(input_size)
+def unet(learning_rate, classes, input_channels=8):
+    # Can represent variable input dimensions by None
+    inputs = Input((None, None, input_channels))
     conv1 = Conv2D(32, (3, 3), activation = 'elu', padding = 'same', kernel_initializer = 'he_normal')(inputs)
     # TODO: it might be better to separate activation so that it goes
     #   conv -> activation -> bn
@@ -164,7 +163,6 @@ def unet(learning_rate, classes, input_size = (None, None, 8)):
     conv9 = Conv2D(32, (3, 3),activation = 'elu', padding = 'same', kernel_initializer = 'he_normal')(conv9)
     conv10 = Conv2D(classes,1, activation = 'sigmoid')(conv9)
 
-    # CHANGE: typo in Model - keywords were inputs, outputs
     model = tf.keras.Model(inputs=inputs, outputs=conv10)
     model.compile(optimizer = Adam(lr = learning_rate), loss = 'binary_crossentropy', metrics = ['accuracy'])
     
@@ -219,7 +217,7 @@ def read_images(num_classes):
             
         mask = mask/255        
 
-        # CHANGE: use 80% of images for train, 20% for validation
+        # use 80% of images for train, 20% for validation
         if i < num_training_images * 0.8:
             X_DICT_TRAIN[i] = img_m
             Y_DICT_TRAIN[i] = mask
