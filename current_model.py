@@ -343,10 +343,10 @@ def parse_args():
 
     parser.add_argument('--val_patches', dest='val_patches',
                         default=False, action='store_true',
-                        help='Use patches from the val set (default)')
+                        help='Use patches from the val set')
     parser.add_argument('--no_val_patches', dest='val_patches',
                         action='store_false',
-                        help="Use the entire block of validation data")
+                        help="Use the entire block of validation data (default)")
 
     parser.add_argument('--save_best_only', dest='save_best_only',
                         default=True, action='store_true',
