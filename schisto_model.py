@@ -88,23 +88,34 @@ def get_rand_patch(img, mask, sz):
 
 
 def get_patches(dataset, n_patches, sz):
+    """
+    Returns X, Y arrays of patches.
+
+    Patches are randomly selected images from the given dataset of
+    the requested size.
+    Each patch might have a random transformation applied to it.
+    """
     x_dict, y_dict = dataset
-    x = list()
-    y = list()
-    total_patches = 0
-    while total_patches < n_patches:
+    x = []
+    y = []
+    for _ in range(n_patches):
         img_id = random.sample(x_dict.keys(), 1)[0]
         img = x_dict[img_id]
         mask = y_dict[img_id]
         img_patch, mask_patch = get_rand_patch(img, mask, sz)
         x.append(img_patch)
         y.append(mask_patch)
-        total_patches += 1
     #print('Generated {} patches'.format(total_patches))
     return np.array(x), np.array(y)
 
 def unet(learning_rate, classes, input_channels=8):
-    # Can represent variable input dimensions by None
+    """
+    Builds a u-net out of TF Keras layers
+
+    Batch Normalization layers are added in between each pair of Conv2D
+    Note that the input size is unconstrained, as the network will
+    operate on any size image (past a certain minimum)
+    """
     inputs = Input((None, None, input_channels))
     conv1 = Conv2D(32, (3, 3), activation = 'elu', padding = 'same', kernel_initializer = 'he_normal')(inputs)
     # TODO: it might be better to separate activation so that it goes
@@ -138,7 +149,7 @@ def unet(learning_rate, classes, input_channels=8):
     merge6 = concatenate([drop4,up6], axis=3)
     conv6 = Conv2D(256, (3, 3),activation = 'elu', padding = 'same', kernel_initializer = 'he_normal')(merge6)
     # TODO: it is not clear we want these BN layers - there was
-    # slightly better performance with just the up, not the down, but
+    # slightly better performance with just the down, not the up, but
     # that is with a very small val set
     conv6 = BatchNormalization()(conv6)
     conv6 = Conv2D(256, (3, 3),activation = 'elu', padding = 'same', kernel_initializer = 'he_normal')(conv6)
@@ -185,6 +196,15 @@ def read_tif(image_filename):
     return img_m
 
 def read_images(num_classes, image_path):
+    """
+    Reads images from the given path
+
+    20% (could be parametrized) are split off into a val set
+    Returns (train_set, val_set) where both training sets are
+      (X, Y), input channels & masks
+    If num_classes == 4, four masks are returned, with cera being mask 0
+    If num_classes == 3, cera and emergent plants are combined
+    """
     X_DICT_TRAIN = dict()
     Y_DICT_TRAIN = dict()
     X_DICT_VALIDATION = dict()
@@ -231,6 +251,9 @@ def read_images(num_classes, image_path):
     return train_set, val_set
 
 def stack_dataset(dataset):
+    """
+    Returns the X, Y dicts from read_images as 2 numpy arrays
+    """
     x_dict, y_dict = dataset
     X = []
     Y = []
@@ -282,6 +305,14 @@ def train(model, model_filename, train_set, val_set, args):
         model.save(model_filename)
 
 def display_heat_map(model, filename):
+    """Builds a heat map from the given TIF file
+
+    First, the image is converted into a greyscale image where the
+    darkest color is 128/255 so that features are somewhat visible.
+    Then, colors ranging from blue to red to yellow are superimposed
+    based on the model's prediction.  Probability of being cera: 0=blue,
+    0.4=red, 0.8 or higher = yellow.
+    """
     test_image = read_tif(filename)
     test_batch = np.expand_dims(test_image, axis=0)
     prediction = model.predict(test_batch)
@@ -364,6 +395,9 @@ def parse_args():
     return args
 
 def print_args(args):
+    """
+    For record keeping purposes, print out the arguments
+    """
     args = vars(args)
     keys = sorted(args.keys())
     print('ARGS:')
@@ -371,6 +405,22 @@ def print_args(args):
         print('%s: %s' % (k, args[k]))
         
 if __name__ == '__main__':
+    """
+    Load a model or create a model with random weights.
+    Then possibly train it.
+    Finally, possibly display a heat map for a given image.
+
+    To train:
+      python [script name] --save_model [model name]
+
+    Training images will be loaded from --training_home
+
+    To continue training an existing model, --load_model [model name]
+
+    To display a heat map, --heat_map [8 channel .TIF image]
+
+    To not train, --no_train
+    """
     args = parse_args()
     print_args(args)
 
