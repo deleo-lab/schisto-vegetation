@@ -1,4 +1,5 @@
 import argparse
+import glob
 import os
 import random
 
@@ -29,8 +30,6 @@ WATER_MASK = '%s/water_mask_set3/'
 LAND_MASK = '%s/land_mask_set3/'
 EMERGENT_MASK = '%s/emergent_mask_set3/'
 CERA_MASK = '%s/cera_mask_set3/'
-
-num_training_images = 50
 
 STARTING_LR = 4e-5
 
@@ -209,19 +208,24 @@ def read_images(num_classes, image_path):
     Y_DICT_TRAIN = dict()
     X_DICT_VALIDATION = dict()
     Y_DICT_VALIDATION = dict()
-    for i in range (0,num_training_images):
+
+    tif_files = glob.glob(PATH_TIF % image_path + '*.TIF')
+    tif_files = sorted(tif_files)
+    
+    for image_filename in tif_files:
         # TODO: use the directory listing directly rather than
         # expecting hardcoded names
-        image_filename = PATH_TIF % image_path + '%d.TIF' % i
         img_m = read_tif(image_filename)
+        _, base_name = os.path.split(image_filename) # filename -> 05.TIF
+        base_name, _ = os.path.splitext(base_name)   # remove the .TIF
         
         #create 3d mask where each channel is the mask for a specific class
         mask = np.zeros((512,512,num_classes))
         
-        mask_water = io.imread(WATER_MASK % image_path + '%d.png'%i)
-        mask_land = io.imread(LAND_MASK % image_path + '%d.png'%i)
-        mask_emerg = io.imread(EMERGENT_MASK % image_path +'%d.png'%i)
-        mask_cera = io.imread(CERA_MASK % image_path + '%d.png'%i)
+        mask_water = io.imread(WATER_MASK % image_path + '%s.png'%base_name)
+        mask_land = io.imread(LAND_MASK % image_path + '%s.png'%base_name)
+        mask_emerg = io.imread(EMERGENT_MASK % image_path +'%s.png'%base_name)
+        mask_cera = io.imread(CERA_MASK % image_path + '%s.png'%base_name)
 
         if num_classes == 3:
             mask[:,:,2] = mask_water[:,:]
@@ -237,14 +241,16 @@ def read_images(num_classes, image_path):
         mask = mask/255        
 
         # use 80% of images for train, 20% for validation
-        if i < num_training_images * 0.8:
-            X_DICT_TRAIN[i] = img_m
-            Y_DICT_TRAIN[i] = mask
+        if len(X_DICT_TRAIN) < len(tif_files) * 0.8:
+            X_DICT_TRAIN[base_name] = img_m
+            Y_DICT_TRAIN[base_name] = mask
+            dataset = "train"
         else:
-            X_DICT_VALIDATION[i] = img_m
-            Y_DICT_VALIDATION[i] = mask
+            X_DICT_VALIDATION[base_name] = img_m
+            Y_DICT_VALIDATION[base_name] = mask
+            dataset = "val"
 
-        print('read ' + image_filename)
+        print('read %s (%s)' % (image_filename, dataset))
 
     train_set = (X_DICT_TRAIN, Y_DICT_TRAIN)
     val_set = (X_DICT_VALIDATION, Y_DICT_VALIDATION)
