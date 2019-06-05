@@ -20,7 +20,7 @@ def print_min_max(arr):
     for channel in range(arr.shape[2]):
         print(channel, np.min(arr[:, :, channel]), np.max(arr[:, :, channel]))
 
-def display_image(path, save_path=None):
+def convert_image(path):
     raw = skimage.io.imread(path)
     print_min_max(raw)
     rgb = np.tensordot(raw, transform, 1) / 2048 * 256
@@ -29,16 +29,43 @@ def display_image(path, save_path=None):
         rgb = rgb / np.max(rgb) * 0.8 * 256
     rgb = np.array(rgb, dtype=np.int8)
     im = Image.fromarray(rgb, "RGB")
+    return im
+
+def convert_directory(source, dest):
+    files = glob.glob(os.path.join(source, "*.tif"))
+    for f in files:
+        filename = os.path.split(f)[1]
+        rgb_home = os.path.join(dest, filename)
+        if os.path.exists(rgb_home):
+            print("Skipping %s: %s already exists" % (f, rgb_home))
+        else:
+            print("Converting %s" % f)
+            im = convert_image(f)
+            im.save(rgb_home)
+
+def display_image(path, save_path=None):
+    im = convert_image(path)
     im.show()
     if save_path:
         im.save(save_path)
+    return im
 
 
 if __name__ == '__main__':
     path = sys.argv[1]
-    if len(sys.argv) > 2:
-        save_path = sys.argv[2]
-        display_image(path, save_path)
+    if os.path.isdir(path):
+        if len(sys.argv) == 2:
+            print("To convert an entire directory, please give a directory for output")
+            sys.exit(-1)
+        dest = sys.argv[2]
+        if not os.path.exists(dest):
+            os.makedirs(dest)
+        elif os.path.isfile(dest):
+            print("%s exists and is a regular file" % dest)
+            sys.exit(-1)
+        convert_directory(path, dest)
     else:
-        display_image(path)
-        
+        im = display_image(path)
+        if len(sys.argv) > 2:
+            save_path = sys.argv[2]
+            im.save(save_path)
