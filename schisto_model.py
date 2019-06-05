@@ -137,11 +137,14 @@ def unet(learning_rate, classes, input_channels=8):
     conv4 = Conv2D(256, (3, 3),activation = 'elu', padding = 'same', kernel_initializer = 'he_normal')(pool3)
     conv4 = BatchNormalization()(conv4)
     conv4 = Conv2D(256, (3, 3),activation = 'elu', padding = 'same', kernel_initializer = 'he_normal')(conv4)
+    conv4 = BatchNormalization()(conv4)
     drop4 = Dropout(0.1)(conv4)
     pool4 = MaxPooling2D(pool_size=(2, 2))(drop4)
 
     conv5 = Conv2D(512, (3, 3),activation = 'elu', padding = 'same', kernel_initializer = 'he_normal')(pool4)
+    conv5 = BatchNormalization()(conv5)
     conv5 = Conv2D(512, (3, 3),activation = 'elu', padding = 'same', kernel_initializer = 'he_normal')(conv5)
+    conv5 = BatchNormalization()(conv5)
     drop5 = Dropout(0.1)(conv5)
 
     up6 = Conv2D(256, (2, 2), activation = 'elu', padding = 'same', kernel_initializer = 'he_normal')(UpSampling2D(size = (2,2))(drop5))
