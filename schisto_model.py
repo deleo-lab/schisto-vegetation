@@ -310,7 +310,7 @@ def train(model, model_filename, train_set, val_set, args):
     if not args.save_best_only:
         model.save(model_filename)
 
-def display_heat_map(model, filename):
+def process_heat_map(model, filename, save_filename=None):
     """Builds a heat map from the given TIF file
 
     First, the image is converted into a greyscale image where the
@@ -318,6 +318,8 @@ def display_heat_map(model, filename):
     Then, colors ranging from blue to red to yellow are superimposed
     based on the model's prediction.  Probability of being cera: 0=blue,
     0.4=red, 0.8 or higher = yellow.
+
+    if save_filename != None, the heat map is saved to that file
     """
     test_image = read_tif(filename)
     test_batch = np.expand_dims(test_image, axis=0)
@@ -352,6 +354,9 @@ def display_heat_map(model, filename):
     rgb = np.array(rgb, dtype=np.int8)
     im = Image.fromarray(rgb, "RGB")
     im.show()
+
+    if save_filename:
+        im.save(save_filename)
 
     
 def parse_args():
@@ -393,6 +398,8 @@ def parse_args():
 
     parser.add_argument('--heat_map', default=None,
                         help='A file on which to run the model')
+    parser.add_argument('--save_heat_map', default=None,
+                        help='Where to save the heat map, if applicable')
 
     parser.add_argument('--training_home', default='c:/Users/horat/Documents/hai/schisto/training_set',
                         help='Where to get the training data')
@@ -450,4 +457,4 @@ if __name__ == '__main__':
 
     if args.heat_map:
         print("Running model on %s" % args.heat_map)
-        display_heat_map(model, args.heat_map)
+        process_heat_map(model, args.heat_map, args.save_heat_map)
