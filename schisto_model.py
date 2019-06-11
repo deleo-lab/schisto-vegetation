@@ -25,11 +25,11 @@ TRAIN_SZ = 50  # train size
 VAL_SZ = 15   # validation size
 N_EPOCHS = 500  #150
 
-PATH_TIF = '%s/8_bands_set3/'
-WATER_MASK = '%s/water_mask_set3/'
-LAND_MASK = '%s/land_mask_set3/'
-EMERGENT_MASK = '%s/emergent_mask_set3/'
-CERA_MASK = '%s/cera_mask_set3/'
+PATH_TIF = '%s/8_bands/'
+WATER_MASK = '%s/water_mask/'
+LAND_MASK = '%s/land_mask/'
+EMERGENT_MASK = '%s/emergent_mask/'
+CERA_MASK = '%s/cera_mask/'
 
 STARTING_LR = 4e-5
 
