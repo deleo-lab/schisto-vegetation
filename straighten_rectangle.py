@@ -1,4 +1,5 @@
 import argparse
+import os
 import re
 import sys
 
@@ -19,6 +20,9 @@ def parse_args():
     parser.add_argument('--trapezoid', default=None,
                         help='Trapezoid to preserve from original file')
 
+    parser.add_argument('--output_suffix', default='_trans',
+                        help='Suffix for outputting the transformed file(s)')
+    
     args = parser.parse_args()
     return args
 
@@ -43,8 +47,22 @@ if __name__ == '__main__':
 
     transform = ProjectiveTransform()
     transform.estimate(desired, original)
-    t_image = warp(raw, transform)
 
-    rgb = np.array(t_image * 256, dtype=np.int8)
-    im = Image.fromarray(rgb, "RGB")
-    im.show()
+    base_files = [base_file]
+
+    files = []
+    for infile in base_files:
+        base, ext = os.path.splitext(infile)
+        outfile = base + args.output_suffix + ext
+        if os.path.exists(outfile):
+            raise RuntimeError("Cowardly refusing to overwrite %s" % outfile)
+        files.append((infile, outfile))
+
+    for infile, outfile in files:
+        t_image = warp(raw, transform)
+
+        rgb = np.array(t_image * 256, dtype=np.int8)
+        im = Image.fromarray(rgb, "RGB")
+        im.show()
+        im.save(outfile)
+        
