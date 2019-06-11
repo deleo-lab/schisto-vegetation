@@ -23,10 +23,10 @@ def print_min_max(arr):
 def convert_image(path):
     raw = skimage.io.imread(path)
     print_min_max(raw)
-    rgb = np.tensordot(raw, transform, 1) / 2048 * 256
-    if np.max(rgb) < 0.8 * 256:
+    rgb = np.tensordot(raw, transform, 1) / 2048 * 255
+    if np.max(rgb) < 0.8 * 255:
         # Brighten up the image a bit, since these images are dark AF
-        rgb = rgb / np.max(rgb) * 0.8 * 256
+        rgb = rgb / np.max(rgb) * 0.8 * 255
     rgb = np.array(rgb, dtype=np.int8)
     im = Image.fromarray(rgb, "RGB")
     return im

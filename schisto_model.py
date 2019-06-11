@@ -353,7 +353,7 @@ def process_heat_map(model, filename, save_filename=None):
 
     rgb = heat_map * grey
 
-    rgb = rgb * 256
+    rgb = rgb * 255
     rgb = np.array(rgb, dtype=np.int8)
     im = Image.fromarray(rgb, "RGB")
     im.show()

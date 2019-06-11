@@ -61,7 +61,7 @@ if __name__ == '__main__':
     for infile, outfile in files:
         t_image = warp(raw, transform)
 
-        rgb = np.array(t_image * 256, dtype=np.int8)
+        rgb = np.array(t_image * 255, dtype=np.int8)
         im = Image.fromarray(rgb, "RGB")
         im.show()
         im.save(outfile)
