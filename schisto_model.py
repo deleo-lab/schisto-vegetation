@@ -119,7 +119,11 @@ def unet(learning_rate, classes, input_channels=8):
     conv1 = Conv2D(32, (3, 3), activation = 'elu', padding = 'same', kernel_initializer = 'he_normal')(inputs)
     # TODO: it might be better to separate activation so that it goes
     #   conv -> activation -> bn
-    # but sadly TF 2.0 alpha has a bug saving models with a separate activation layer
+    # would like to try conv -> bn -> activation
+    # sadly TF 2.0 alpha has a bug saving models with a separate
+    # activation layer
+    # on the bright side, most results out there seem to prefer
+    # this order anyway
     conv1 = BatchNormalization()(conv1)
     conv1 = Conv2D(32, (3, 3), activation = 'elu', padding = 'same', kernel_initializer = 'he_normal')(conv1)
     pool1 = MaxPooling2D(pool_size=(2, 2))(conv1)
