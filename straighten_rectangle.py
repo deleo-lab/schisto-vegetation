@@ -3,6 +3,7 @@ import glob
 import os
 import re
 import sys
+import warnings
 
 import numpy as np
 from PIL import Image
@@ -46,6 +47,14 @@ def parse_trapezoid(trapezoid):
     original = np.asarray(original)
     return original
 
+def check_mask(mask):
+    values = {}
+    for i in range(mask.shape[0]):
+        for j in range(mask.shape[1]):
+            values[mask[i, j]] = values.get(mask[i, j], 0) + 1
+    for k in values.keys():
+        if k != 0 and k != 255:
+            raise RuntimeError("Mask was not entirely 0 or 255")
 
 if __name__ == '__main__':
     args = parse_args()
@@ -92,20 +101,31 @@ if __name__ == '__main__':
         print("Transforming %s into %s" % (infile, outfile))
         if infile != base_file:
             raw = skimage.io.imread(infile)
-        t_image = warp(raw, transform)
-        # TODO: saving images causes various errors, such as
-        # masks:
-        #   Lossy conversion from float64 to uint8. Range [0, 1].
-        # 8 band:
-        #   ~ is a low contrast image
-        skimage.io.imsave(outfile, t_image)
-
-        # TODO: show the image
-        #if len(raw.shape) == 2 or raw.shape[2] == 3:
-        #    skimage.io.imshow(t_image)
-
-        #rgb = np.array(t_image * 255, dtype=np.int8)
-        #im = Image.fromarray(rgb, "RGB")
-        #im.show()
-        #im.save(outfile)
+        # order=0 means nearest neighbor rather than interpolation
+        if len(raw.shape) == 2:
+            # found a mask
+            t_image = warp(raw, transform, order=0)
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")            
+                t_image = skimage.img_as_ubyte(t_image)
+            check_mask(t_image)
+            skimage.io.imsave(outfile, t_image)
+        elif len(raw.shape) == 3 and raw.shape[2] == 3:
+            # RGB image, presumably converted from satellite
+            t_image = warp(raw, transform, order=0)
+            rgb = np.array(t_image * 255, dtype=np.int8)
+            im = Image.fromarray(rgb, "RGB")
+            im.show()
+            im.save(outfile)
+        elif len(raw.shape) == 3 and raw.shape[2] == 8:
+            # Satellite image
+            t_image = warp(raw, transform, order=0, preserve_range=True)
+            # todo: would be nice to put it back as uint_16
+            skimage.io.imsave(outfile, t_image)
         
+            #foo = skimage.io.imread(outfile)
+            #print(np.max(foo), np.min(foo), foo.dtype)
+            #print(np.max(raw), np.min(raw), raw.dtype)
+            #print(np.max(t_image), np.min(t_image), t_image.dtype)
+        else:
+            raise RuntimeError("Don't know how to handle %s" % infile)
