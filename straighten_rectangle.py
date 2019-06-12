@@ -124,10 +124,5 @@ if __name__ == '__main__':
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")            
                 skimage.io.imsave(outfile, t_image)
-        
-            #foo = skimage.io.imread(outfile)
-            #print(np.max(foo), np.min(foo), foo.dtype)
-            #print(np.max(raw), np.min(raw), raw.dtype)
-            #print(np.max(t_image), np.min(t_image), t_image.dtype)
         else:
             raise RuntimeError("Don't know how to handle %s" % infile)
