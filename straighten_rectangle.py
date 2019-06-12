@@ -91,6 +91,15 @@ def get_sibling_files(base_file, subdirs):
     return base_files
         
 if __name__ == '__main__':
+    """ 
+    Takes an image file and a shape as arguments.  Stretches the
+    inside of the shape to fill the entire image.  For example, the
+    original 35.TIF was slightly cut off on the left, and this script
+    can fix that and simultaneously stretch all the masks.
+
+    Example for running this program:
+      python -u straighten_rectangle.py --base_file ../training_set/8_bands/35.TIF --shape "((64, 0), (511, 0), (511, 511), (60, 511))" --transform_all
+    """
     args = parse_args()
 
     base_file = os.path.normpath(args.base_file)
