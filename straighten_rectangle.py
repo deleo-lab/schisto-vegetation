@@ -120,8 +120,10 @@ if __name__ == '__main__':
         elif len(raw.shape) == 3 and raw.shape[2] == 8:
             # Satellite image
             t_image = warp(raw, transform, order=0, preserve_range=True)
-            # todo: would be nice to put it back as uint_16
-            skimage.io.imsave(outfile, t_image)
+            t_image = np.asarray(t_image, dtype=raw.dtype)
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")            
+                skimage.io.imsave(outfile, t_image)
         
             #foo = skimage.io.imread(outfile)
             #print(np.max(foo), np.min(foo), foo.dtype)
