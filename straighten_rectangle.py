@@ -73,6 +73,7 @@ def get_sibling_files(base_file, subdirs):
     """
     # we put base_file first so that we can save a read later
     base_files = [base_file]
+    # TODO: handle case of base_file being in current directory
     parent_dir = os.path.split(os.path.split(base_file)[0])[0]
     base_name = os.path.splitext(os.path.split(base_file)[1])[0]
     print("Processing all files in directory %s with base_name %s" %
