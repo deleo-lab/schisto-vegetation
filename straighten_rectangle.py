@@ -11,6 +11,9 @@ import skimage.io
 from skimage.transform import warp, ProjectiveTransform
 
 def find_edges(raw):
+    """
+    Return a np array describing the shape of the image
+    """
     shape = raw.shape
     return np.asarray([[0, 0], [shape[0], 0],
                        [shape[0], shape[1]], [0, shape[1]]])
@@ -19,8 +22,8 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Transform a training/test example.')
     parser.add_argument('--base_file', default=None,
                         help='Which file to process')
-    parser.add_argument('--trapezoid', default=None,
-                        help='Trapezoid to preserve from original file')
+    parser.add_argument('--shape', default=None,
+                        help='Shape to preserve from original file')
 
     parser.add_argument('--output_suffix', default='_trans',
                         help='Suffix for outputting the transformed file(s)')
@@ -38,16 +41,17 @@ def parse_args():
     args = parser.parse_args()
     return args
 
-def parse_trapezoid(trapezoid):
+def parse_shape(shape):
     """
     Parse text that looks like this:
       "((64, 0), (511, 0), (511, 511), (60, 511))"
+    Returns a numpy array representing this quadrilateral
     """
-    # trapezoid will be stretched in the order UL, UR, LR, LL
+    # shape will be stretched in the order UL, UR, LR, LL
     pattern = re.compile("^[(), 0-9]+$")
-    if not pattern.match(trapezoid):
-        raise RuntimeError("Illegal characters in the trapezoid description")
-    original = eval(trapezoid)
+    if not pattern.match(shape):
+        raise RuntimeError("Illegal characters in the shape description")
+    original = eval(shape)
     original = np.asarray(original)
     return original
 
@@ -93,7 +97,7 @@ if __name__ == '__main__':
     raw = {}
     raw = skimage.io.imread(base_file)
 
-    original = parse_trapezoid(args.trapezoid)
+    original = parse_shape(args.shape)
     desired = find_edges(raw)
 
     transform = ProjectiveTransform()
