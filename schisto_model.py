@@ -440,6 +440,9 @@ if __name__ == '__main__':
     To display a heat map, --heat_map [8 channel .TIF image]
 
     To not train, --no_train
+
+    Sample command line to retrain new model:
+      python schisto_model.py --save_model foo.h5
     """
     args = parse_args()
     print_args(args)
