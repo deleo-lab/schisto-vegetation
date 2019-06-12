@@ -52,6 +52,19 @@ def display_image(path, save_path=None):
 
 
 if __name__ == '__main__':
+    """
+    A program to display and possibly convert satellite images.
+
+    Command line is:
+      ~ <input> [output]
+
+    If input is a file, a single file is processed.  It will be displayed,
+    and if output is present, the file will be written to output.
+
+    If input is a directory, output is necessary.  
+    In that case, each image in the directory will be converted.  
+    Images will not be displayed.
+    """
     path = sys.argv[1]
     if os.path.isdir(path):
         if len(sys.argv) == 2:
