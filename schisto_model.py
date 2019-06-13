@@ -198,8 +198,10 @@ def transform_rgb_image(image):
     return rgb
     
 def read_tif(image_filename):
-    img_m = io.imread(image_filename)
-    return img_m
+    return io.imread(image_filename)
+
+def read_mask(mask_file):
+    return io.imread(mask_file)
 
 def read_images(num_classes, image_path):
     """
@@ -228,11 +230,11 @@ def read_images(num_classes, image_path):
         
         #create 3d mask where each channel is the mask for a specific class
         mask = np.zeros((512,512,num_classes))
-        
-        mask_water = io.imread(WATER_MASK % image_path + '%s.png'%base_name)
-        mask_land = io.imread(LAND_MASK % image_path + '%s.png'%base_name)
-        mask_emerg = io.imread(EMERGENT_MASK % image_path +'%s.png'%base_name)
-        mask_cera = io.imread(CERA_MASK % image_path + '%s.png'%base_name)
+
+        mask_water = read_mask(WATER_MASK % image_path + '%s.png'%base_name)
+        mask_land = read_mask(LAND_MASK % image_path + '%s.png'%base_name)
+        mask_emerg = read_mask(EMERGENT_MASK % image_path +'%s.png'%base_name)
+        mask_cera = read_mask(CERA_MASK % image_path + '%s.png'%base_name)
 
         if num_classes == 3:
             mask[:,:,2] = mask_water[:,:]
@@ -245,7 +247,13 @@ def read_images(num_classes, image_path):
             mask[:,:,1] = mask_emerg[:,:]
             mask[:,:,0] = mask_cera[:,:]            
             
-        mask = mask/255        
+        mask = mask/255
+        mask_sum = np.sum(mask, axis=2)
+        if np.min(mask_sum) == 0:
+            print("Warning: %s has %d unlabeled pixels" %
+                  (base_name, len(np.where(mask_sum == 0)[0])))
+        elif np.max(mask_sum) > 1:
+            print("Warning: %s has pixel with multiple labels" % base_name)
 
         # use 80% of images for train, 20% for validation
         if len(X_DICT_TRAIN) < len(tif_files) * 0.8:
@@ -463,8 +471,11 @@ if __name__ == '__main__':
         
     if args.train:
         train_set, val_set = read_images(num_classes, args.training_home)
+
+    if args.train:
         train(model, args.save_model, train_set, val_set, args)
 
     if args.heat_map:
         print("Running model on %s" % args.heat_map)
         process_heat_map(model, args.heat_map, args.save_heat_map)
+
