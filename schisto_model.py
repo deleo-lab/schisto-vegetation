@@ -107,6 +107,57 @@ def get_patches(dataset, n_patches, sz):
     #print('Generated {} patches'.format(total_patches))
     return np.array(x), np.array(y)
 
+def conv_classifier(learning_rate, classes, input_channels=8):
+    """
+    Another simple baseline which only look at single pixels to classify
+    Starts with a 3x3 conv, then does a bunch of 1x1 convs
+
+    Goal is to test how necessary a model like the U-Net actually is
+
+    The best trained model as of 2019-06-13 was 0.952 val accuracy,
+    roughly 2% lower than the best U-net.
+    """
+    inputs = Input((None, None, input_channels))
+    conv1 = Conv2D(128, (3, 3), activation = 'elu', padding = 'same', kernel_initializer = 'he_normal')(inputs)
+    conv1 = BatchNormalization()(conv1)
+    conv2 = Conv2D(128, (1, 1), activation = 'elu', padding = 'same', kernel_initializer = 'he_normal')(conv1)
+    conv2 = BatchNormalization()(conv2)
+    drop2 = Dropout(0.1)(conv2)
+    conv3 = Conv2D(64, (1, 1), activation = 'elu', padding = 'same', kernel_initializer = 'he_normal')(drop2)
+    conv3 = BatchNormalization()(conv3)
+    conv4 = Conv2D(32, (1, 1), activation = 'elu', padding = 'same', kernel_initializer = 'he_normal')(conv3)
+    conv5 = Conv2D(classes,1, activation = 'sigmoid')(conv4)
+
+    model = tf.keras.Model(inputs=inputs, outputs=conv5)
+    model.compile(optimizer = Adam(lr = learning_rate), loss = 'binary_crossentropy', metrics = ['accuracy'])
+    return model
+    
+
+
+def pixel_classifier(learning_rate, classes, input_channels=8):
+    """
+    A simple baseline which only look at single pixels to classify
+
+    Goal is to test how necessary a model like the U-Net actually is
+
+    The best trained model as of 2019-06-13 was 0.956 val accuracy,
+    roughly 2% lower than the best U-net.
+    """
+    inputs = Input((None, None, input_channels))
+    conv1 = Conv2D(64, (1, 1), activation = 'elu', padding = 'same', kernel_initializer = 'he_normal')(inputs)
+    conv1 = BatchNormalization()(conv1)
+    conv2 = Conv2D(64, (1, 1), activation = 'elu', padding = 'same', kernel_initializer = 'he_normal')(conv1)
+    conv2 = BatchNormalization()(conv2)
+    drop2 = Dropout(0.1)(conv2)
+    conv3 = Conv2D(64, (1, 1), activation = 'elu', padding = 'same', kernel_initializer = 'he_normal')(drop2)
+    conv3 = BatchNormalization()(conv3)
+    conv4 = Conv2D(32, (1, 1), activation = 'elu', padding = 'same', kernel_initializer = 'he_normal')(conv3)
+    conv5 = Conv2D(classes,1, activation = 'sigmoid')(conv4)
+
+    model = tf.keras.Model(inputs=inputs, outputs=conv5)
+    model.compile(optimizer = Adam(lr = learning_rate), loss = 'binary_crossentropy', metrics = ['accuracy'])
+    return model
+    
 def unet(learning_rate, classes, input_channels=8):
     """
     Builds a u-net out of TF Keras layers
@@ -382,6 +433,9 @@ def parse_args():
                         help=('Filename for loading a model, either as '
                               'a starting point for training or for testing'))
 
+    parser.add_argument('--model_type', default='unet',
+                        help=('Model type to use.  unet, 1x1 pixel classifier, or 3x3 pixel classifier.  unet/pixel_classifier/conv_classifier'))
+
     parser.add_argument('--separate_ceratophyllum',
                         dest='separate_ceratophyllum',
                         default=True, action='store_true',
@@ -467,8 +521,15 @@ if __name__ == '__main__':
         else:
             num_classes = 3
 
-        model = unet(STARTING_LR, num_classes)
-        
+        if args.model_type == 'unet':
+            model = unet(STARTING_LR, num_classes)
+        elif args.model_type == 'pixel_classifier':
+            model = pixel_classifier(STARTING_LR, num_classes)
+        elif args.model_type == 'conv_classifier':
+            model = conv_classifier(STARTING_LR, num_classes)
+        else:
+            raise RuntimeError("Unknown model type %s" % args.model_type)
+
     if args.train:
         train_set, val_set = read_images(num_classes, args.training_home)
 
