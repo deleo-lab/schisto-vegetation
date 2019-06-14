@@ -537,6 +537,8 @@ if __name__ == '__main__':
         train(model, args.save_model, train_set, val_set, args)
 
     if args.heat_map:
+        # TODO: would need to save the best model or just reload it
+        # if we ran training and wanted to use the best
         print("Running model on %s" % args.heat_map)
         process_heat_map(model, args.heat_map, args.save_heat_map)
 
