@@ -254,6 +254,9 @@ def read_tif(image_filename):
 def read_mask(mask_file):
     return io.imread(mask_file)
 
+def read_rgb(rgb_file):
+    return io.imread(rgb_file)
+
 def read_images(num_classes, image_path):
     """
     Reads images from the given path
@@ -275,6 +278,9 @@ def read_images(num_classes, image_path):
     for image_filename in tif_files:
         # TODO: use the directory listing directly rather than
         # expecting hardcoded names
+        # note: this image is used later when building heat maps
+        # of the directory.  would need to re-read the image if
+        # it is manipulated at all here.
         img_m = read_tif(image_filename)
         _, base_name = os.path.split(image_filename) # filename -> 05.TIF
         base_name, _ = os.path.splitext(base_name)   # remove the .TIF
@@ -376,7 +382,7 @@ def train(model, model_filename, train_set, val_set, args):
     if not args.save_best_only:
         model.save(model_filename)
 
-def process_heat_map(model, filename, save_filename=None):
+def process_heat_map(model, test_image, display, save_filename=None):
     """Builds a heat map from the given TIF file
 
     First, the image is converted into a greyscale image where the
@@ -387,7 +393,6 @@ def process_heat_map(model, filename, save_filename=None):
 
     if save_filename != None, the heat map is saved to that file
     """
-    test_image = read_tif(filename)
     test_batch = np.expand_dims(test_image, axis=0)
     prediction = model.predict(test_batch)
 
@@ -419,12 +424,55 @@ def process_heat_map(model, filename, save_filename=None):
     rgb = rgb * 255
     rgb = np.array(rgb, dtype=np.int8)
     im = Image.fromarray(rgb, "RGB")
-    im.show()
+    if display:
+        im.show()
 
     if save_filename:
         im.save(save_filename)
 
+    return rgb
+
     
+def process_heat_map_set(model, dataset, in_dir, out_dir):
+    if not os.path.exists(out_dir):
+        os.makedirs(out_dir)
+    X, Y = dataset
+    files = X.keys()
+    for base_name in files:
+        # base_name should already have the .tif split off
+        save_filename = os.path.join(out_dir, base_name + ".bmp")
+        test_image = X[base_name]
+
+        heat_map = process_heat_map(model, test_image, display=False)
+
+        # first channel of the mask is the channel we care about.
+        # make it RGB
+        mask = Y[base_name][:,:,0]
+        mask = np.stack([mask, mask, mask], axis=2)
+        mask = mask * 255
+        mask = np.array(mask, dtype=np.int8)
+
+        result = [heat_map, mask]
+        
+        rgb_name = os.path.join(in_dir, 'RGB', base_name)
+        rgb_files = glob.glob('%s.*' % rgb_name)
+        if len(rgb_files) > 1:
+            print("Warning: more than one file matching %s.*" % rgb_name)
+        elif len(rgb_files) == 0:
+            print("Warning: no files matching %s.*" % rgb_name)
+        else:
+            # also TODO: do this stacking for single heatmaps as well?
+            rgb = read_rgb(rgb_files[0])
+            rgb = np.array(rgb, dtype=np.int8)
+            result = [rgb, heat_map, mask]
+
+        heat_map = np.concatenate(result, axis=1)
+        im = Image.fromarray(heat_map, "RGB")
+        im.save(save_filename)
+        
+            
+            
+
 def parse_args():
     parser = argparse.ArgumentParser(description='Process some integers.')
     parser.add_argument('--save_model', default="unet_3cW_0.h5",
@@ -469,6 +517,8 @@ def parse_args():
                         help='A file on which to run the model')
     parser.add_argument('--save_heat_map', default=None,
                         help='Where to save the heat map, if applicable')
+    parser.add_argument('--heat_map_dir', default=None,
+                        help='A dir to save all the heat maps from train & val')
 
     parser.add_argument('--training_home', default='c:/Users/horat/Documents/hai/schisto/training_set',
                         help='Where to get the training data')
@@ -530,7 +580,7 @@ if __name__ == '__main__':
         else:
             raise RuntimeError("Unknown model type %s" % args.model_type)
 
-    if args.train:
+    if args.train or args.heat_map_dir:
         train_set, val_set = read_images(num_classes, args.training_home)
 
     if args.train:
@@ -540,5 +590,12 @@ if __name__ == '__main__':
         # TODO: would need to save the best model or just reload it
         # if we ran training and wanted to use the best
         print("Running model on %s" % args.heat_map)
-        process_heat_map(model, args.heat_map, args.save_heat_map)
+        process_heat_map(model, read_tif(args.heat_map),
+                         display=True, save_filename=args.save_heat_map)
 
+    if args.heat_map_dir:
+        print("Producing heat maps for all of %s" % args.training_home)
+        process_heat_map_set(model, train_set,
+                             args.training_home, args.heat_map_dir)
+        process_heat_map_set(model, val_set,
+                             args.training_home, args.heat_map_dir)        
