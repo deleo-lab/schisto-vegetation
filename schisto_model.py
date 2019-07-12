@@ -419,7 +419,17 @@ def process_heat_map(model, test_image, display, save_filename=None):
     heat_map = np.stack([red_prediction, green_prediction,
                          blue_prediction], axis=2)
 
-    rgb = heat_map * grey
+    blue_prediction = np.zeros(prediction.shape)
+    blue_prediction[np.where(prediction < 0.5)] = 1
+    green_prediction = 1 - blue_prediction
+    red_prediction = green_prediction
+    classification = np.stack([red_prediction, green_prediction,
+                               blue_prediction], axis=2)
+
+    vis = np.concatenate([heat_map, classification], axis=1)
+    grey = np.concatenate([grey, grey], axis=1)
+
+    rgb = vis * grey
 
     rgb = rgb * 255
     rgb = np.array(rgb, dtype=np.int8)
@@ -451,25 +461,26 @@ def process_heat_map_set(model, dataset, in_dir, out_dir):
         mask = np.stack([mask, mask, mask], axis=2)
         mask = mask * 255
         mask = np.array(mask, dtype=np.int8)
+        for i in range(1, Y[base_name].shape[2]):
+            mask[:, :, i-1] += np.array(Y[base_name][:, :, i] * 255, dtype=np.int8)
 
-        result = [heat_map, mask]
-        
         rgb_name = os.path.join(in_dir, 'RGB', base_name)
         rgb_files = glob.glob('%s.*' % rgb_name)
-        if len(rgb_files) > 1:
-            print("Warning: more than one file matching %s.*" % rgb_name)
-        elif len(rgb_files) == 0:
-            print("Warning: no files matching %s.*" % rgb_name)
-        else:
+        if len(rgb_files) == 1:
             # also TODO: do this stacking for single heatmaps as well?
             rgb = read_rgb(rgb_files[0])
             rgb = np.array(rgb, dtype=np.int8)
-            result = [rgb, heat_map, mask]
+            gold = np.concatenate([rgb, mask], axis=1)
+            heat_map = np.concatenate([gold, heat_map], axis=0)
+        else:
+            if len(rgb_files) > 1:
+                print("Warning: more than one file matching %s.*" % rgb_name)
+            else:
+                print("Warning: no files matching %s.*" % rgb_name)
+            heat_map = np.concatenate([mask, heat_map], axis=1)
 
-        heat_map = np.concatenate(result, axis=1)
         im = Image.fromarray(heat_map, "RGB")
         im.save(save_filename)
-        
             
             
 
@@ -555,6 +566,13 @@ if __name__ == '__main__':
 
     Sample command line to retrain new model:
       python schisto_model.py --save_model foo.h5
+
+    Sample command line to show a single heat map:
+      python schisto_model.py --load_model foo.h5 --no_train --heat_map ../training_set/8_bands/28.TIF 
+
+    Sample command line to process all of the training and validation
+      data into heat maps, with the originals appended to the images:
+      python schisto_model.py --load_model foo.h5 --no_train --heat_map_dir heat_maps
     """
     args = parse_args()
     print_args(args)
