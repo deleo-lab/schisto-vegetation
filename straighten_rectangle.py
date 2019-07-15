@@ -15,8 +15,8 @@ def find_edges(raw):
     Return a np array describing the shape of the image
     """
     shape = raw.shape
-    return np.asarray([[0, 0], [shape[0], 0],
-                       [shape[0], shape[1]], [0, shape[1]]])
+    return np.asarray([[0, 0], [shape[1], 0],
+                       [shape[1], shape[0]], [0, shape[0]]])
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Transform a training/test example.')
@@ -85,11 +85,10 @@ def get_sibling_files(base_file, subdirs):
         if len(images) > 1:
             raise RuntimeError("Found multiple files: %s" % str(images))
         if len(images) == 0:
-            print("Warning: found no file like %s" % path)
-        else:
-            next_file = os.path.normpath(images[0])
-            if next_file != base_file:
-                base_files.append(next_file)
+            raise RuntimeError("Warning: found no file like %s" % path)
+        next_file = os.path.normpath(images[0])
+        if next_file != base_file:
+            base_files.append(next_file)
     return base_files
         
 if __name__ == '__main__':
@@ -101,6 +100,26 @@ if __name__ == '__main__':
 
     Example for running this program:
       python -u straighten_rectangle.py --base_file ../training_set/8_bands/35.TIF --shape "((64, 0), (511, 0), (511, 511), (60, 511))" --transform_all
+
+    To run on the extra set:
+
+      python straighten_rectangle.py --base_file ../extra_set/8_bands/DG_2016_DT_2m.tif --shape "((6, 1), (308, 3), (305, 493), (1, 492))" --transform_all --overwrite
+
+      python straighten_rectangle.py --base_file ../extra_set/8_bands/DG_2016_FS_2m.tif --shape "((2, 137), (589, 1), (696, 457), (108, 592))" --transform_all --overwrite
+
+      python straighten_rectangle.py --base_file ../extra_set/8_bands/DG_2016_GK_2m.tif --shape "((85, 1), (367, 45), (295, 509), (2, 493))" --transform_all --overwrite
+
+      python straighten_rectangle.py --base_file ../extra_set/8_bands/DG_2016_MA_2m.tif --shape "((2, 2), (586, 76), (391, 509), (19, 434))" --transform_all --overwrite
+
+      python straighten_rectangle.py --base_file ../extra_set/8_bands/DG_2016_ME_2m.tif --shape "((362, 2), (517, 408), (332, 674), (2, 504))" --transform_all --overwrite
+
+      python straighten_rectangle.py --base_file ../extra_set/8_bands/DG_2016_MT_2m.tif --shape "((2, 302), (312, 3), (554, 182), (260, 501))" --transform_all --overwrite
+
+      python straighten_rectangle.py --base_file ../extra_set/8_bands/DG_2016_ST_2m.tif --shape "((2, 322), (223, 2), (653, 298), (606, 628))" --transform_all --overwrite
+
+      python straighten_rectangle.py --base_file ../extra_set/8_bands/DG_2016_ST_2m.tif --shape "((2, 322), (606, 628), (321, 923), (102, 775))" --transform_all --overwrite
+
+      python straighten_rectangle.py --base_file ../extra_set/8_bands/DG_2016_ST_2m.tif --shape "((2, 322), (606, 628), (321, 923), (102, 775))" --transform_all --overwrite --output_suffix _trans_B
     """
     args = parse_args()
 
@@ -110,6 +129,9 @@ if __name__ == '__main__':
 
     original = parse_shape(args.shape)
     desired = find_edges(raw)
+
+    print("Original shape: %s" % original)
+    print("Desired shape: %s" % desired)
 
     transform = ProjectiveTransform()
     transform.estimate(desired, original)
