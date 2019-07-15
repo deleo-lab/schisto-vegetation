@@ -86,9 +86,10 @@ def get_sibling_files(base_file, subdirs):
             raise RuntimeError("Found multiple files: %s" % str(images))
         if len(images) == 0:
             print("Warning: found no file like %s" % path)
-        next_file = os.path.normpath(images[0])
-        if next_file != base_file:
-            base_files.append(next_file)
+        else:
+            next_file = os.path.normpath(images[0])
+            if next_file != base_file:
+                base_files.append(next_file)
     return base_files
         
 if __name__ == '__main__':
