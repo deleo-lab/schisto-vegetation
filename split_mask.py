@@ -61,7 +61,19 @@ if __name__ == '__main__':
 
     Since the one channel of mask values has the mask values randomly
     assigned, this script allows you to specify which channel is
-    which.  For example:
+    which.  For example. here are command lines for each of the extra files:
+
+    python split_mask.py --mask_file ../extra_set/masks/DG_2016_DT_2m_Class.tif --land_mask 3 --water_mask 2 --emergent_mask 4 --cera_mask 1
+
+    python split_mask.py --mask_file ../extra_set/masks/DG_2016_FS_2m_Class.tif --land_mask 2 --water_mask 3 --emergent_mask 4 --cera_mask 1
+
+    python split_mask.py --mask_file ../extra_set/masks/DG_2016_GK_2m_Class.tif --land_mask 3 --water_mask 2 --emergent_mask 4 --cera_mask 1
+
+    python split_mask.py --mask_file ../extra_set/masks/DG_2016_MA_2m_Class.tif --land_mask 2 --water_mask 4 --emergent_mask 1 --cera_mask 3
+
+    python split_mask.py --mask_file ../extra_set/masks/DG_2016_ME_2m_Class.tif --land_mask 3 --water_mask 1 --emergent_mask 4 --cera_mask 2
+
+    python split_mask.py --mask_file ../extra_set/masks/DG_2016_MT_2m_Class.tif --land_mask 2 --water_mask 3 --emergent_mask 4 --cera_mask 1
 
     python split_mask.py --mask_file ../extra_set/masks/DG_2016_ST_2m_Class.tif --land_mask 1 --water_mask 3 --emergent_mask 4 --cera_mask 2
     """
