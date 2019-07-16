@@ -1,5 +1,6 @@
 import argparse
 import glob
+import math
 import os
 import re
 import sys
@@ -15,8 +16,12 @@ def find_edges(raw):
     Return a np array describing the shape of the image
     """
     shape = raw.shape
-    return np.asarray([[0, 0], [shape[1], 0],
-                       [shape[1], shape[0]], [0, shape[0]]])
+
+    # round up to the nearest 16, as the unet goes through 4 rounds of contraction
+    width = math.ceil(shape[1] / 16) * 16
+    height = math.ceil(shape[0] / 16) * 16
+    return np.asarray([[0, 0], [width, 0],
+                       [width, height], [0, height]])
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Transform a training/test example.')
@@ -72,8 +77,8 @@ def get_sibling_files(base_file, subdirs):
     Look for files with similar names to base_file in parallel dirs
     """
     # we put base_file first so that we can save a read later
+    base_file = os.path.abspath(base_file)
     base_files = [base_file]
-    # TODO: handle case of base_file being in current directory
     parent_dir = os.path.split(os.path.split(base_file)[0])[0]
     base_name = os.path.splitext(os.path.split(base_file)[1])[0]
     print("Processing all files in directory %s with base_name %s" %
