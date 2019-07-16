@@ -122,7 +122,7 @@ if __name__ == '__main__':
 
       python straighten_rectangle.py --base_file ../extra_set/8_bands/DG_2016_ST_2m.tif --shape "((2, 322), (223, 2), (653, 298), (606, 628))" --transform_all --overwrite
 
-      python straighten_rectangle.py --base_file ../extra_set/8_bands/DG_2016_ST_2m.tif --shape "((2, 322), (606, 628), (321, 923), (102, 775))" --transform_all --overwrite
+      python straighten_rectangle.py --base_file ../extra_set/8_bands/DG_2016_ST_2m.tif --shape "((2, 322), (223, 2), (653, 298), (606, 628))" --transform_all --overwrite
 
       python straighten_rectangle.py --base_file ../extra_set/8_bands/DG_2016_ST_2m.tif --shape "((2, 322), (606, 628), (321, 923), (102, 775))" --transform_all --overwrite --output_suffix _trans_B
     """
