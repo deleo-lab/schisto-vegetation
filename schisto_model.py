@@ -419,6 +419,8 @@ def process_heat_map(model, test_image, display, save_filename=None):
     heat_map = np.stack([red_prediction, green_prediction,
                          blue_prediction], axis=2)
 
+    # now we make a similar image, but just of the classification
+    # if the prediction for cera is high enough, yellow, otherwise blue
     blue_prediction = np.zeros(prediction.shape)
     blue_prediction[np.where(prediction < 0.5)] = 1
     green_prediction = 1 - blue_prediction
@@ -427,13 +429,20 @@ def process_heat_map(model, test_image, display, save_filename=None):
                                blue_prediction], axis=2)
 
     vis = np.concatenate([heat_map, classification], axis=1)
+    # grey is the greyscale of the original image
+    # since the visualization is two images side by side,
+    # stack two copies of grey...
     grey = np.concatenate([grey, grey], axis=1)
 
+    # .. then multiply pixel by pixel with the visualization
+    # so the prediction has some texture to it
     rgb = vis * grey
 
+    # since values are 0..1, rescale to RGB
     rgb = rgb * 255
     rgb = np.array(rgb, dtype=np.int8)
     im = Image.fromarray(rgb, "RGB")
+    
     if display:
         im.show()
 
@@ -456,11 +465,12 @@ def process_heat_map_set(model, dataset, in_dir, out_dir):
         heat_map = process_heat_map(model, test_image, display=False)
 
         # first channel of the mask is the channel we care about.
-        # make it RGB
+        # make it three channels, white
         mask = Y[base_name][:,:,0]
         mask = np.stack([mask, mask, mask], axis=2)
         mask = mask * 255
         mask = np.array(mask, dtype=np.int8)
+        # add the other masks as R, G, B
         for i in range(1, Y[base_name].shape[2]):
             mask[:, :, i-1] += np.array(Y[base_name][:, :, i] * 255, dtype=np.int8)
 
