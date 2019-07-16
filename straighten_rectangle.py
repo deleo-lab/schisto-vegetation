@@ -13,13 +13,16 @@ from skimage.transform import warp, ProjectiveTransform
 
 def find_edges(raw):
     """
-    Return a np array describing the shape of the image
+    Return the desired width & height of the result
     """
     shape = raw.shape
 
     # round up to the nearest 16, as the unet goes through 4 rounds of contraction
     width = math.ceil(shape[1] / 16) * 16
     height = math.ceil(shape[0] / 16) * 16
+    return (width, height)
+
+def output_shape(width, height):
     return np.asarray([[0, 0], [width, 0],
                        [width, height], [0, height]])
 
@@ -133,7 +136,8 @@ if __name__ == '__main__':
     raw = skimage.io.imread(base_file)
 
     original = parse_shape(args.shape)
-    desired = find_edges(raw)
+    width, height = find_edges(raw)
+    desired = output_shape(width, height)
 
     print("Original shape: %s" % original)
     print("Desired shape: %s" % desired)
@@ -161,7 +165,7 @@ if __name__ == '__main__':
         # order=0 means nearest neighbor rather than interpolation
         if len(raw.shape) == 2:
             # found a mask
-            t_image = warp(raw, transform, order=0)
+            t_image = warp(raw, transform, output_shape=(height, width), order=0)
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")            
                 t_image = skimage.img_as_ubyte(t_image)
@@ -169,14 +173,14 @@ if __name__ == '__main__':
             skimage.io.imsave(outfile, t_image)
         elif len(raw.shape) == 3 and raw.shape[2] == 3:
             # RGB image, presumably converted from satellite
-            t_image = warp(raw, transform, order=0)
+            t_image = warp(raw, transform, output_shape=(height, width), order=0)
             rgb = np.array(t_image * 255, dtype=np.int8)
             im = Image.fromarray(rgb, "RGB")
             im.show()
             im.save(outfile)
         elif len(raw.shape) == 3 and raw.shape[2] == 8:
             # Satellite image
-            t_image = warp(raw, transform, order=0, preserve_range=True)
+            t_image = warp(raw, transform, output_shape=(height, width), order=0, preserve_range=True)
             t_image = np.asarray(t_image, dtype=raw.dtype)
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")            
