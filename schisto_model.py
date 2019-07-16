@@ -450,6 +450,7 @@ def process_heat_map_set(model, dataset, in_dir, out_dir):
     X, Y = dataset
     files = X.keys()
     for base_name in files:
+        print("Processing %s" % base_name)
         # base_name should already have the .tif split off
         save_filename = os.path.join(out_dir, base_name + ".bmp")
         test_image = X[base_name]
