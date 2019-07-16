@@ -276,8 +276,6 @@ def read_images(num_classes, image_path):
     tif_files = sorted(tif_files)
     
     for image_filename in tif_files:
-        # TODO: use the directory listing directly rather than
-        # expecting hardcoded names
         # note: this image is used later when building heat maps
         # of the directory.  would need to re-read the image if
         # it is manipulated at all here.
@@ -286,23 +284,17 @@ def read_images(num_classes, image_path):
         base_name, _ = os.path.splitext(base_name)   # remove the .TIF
         
         #create 3d mask where each channel is the mask for a specific class
-        mask = np.zeros((512,512,num_classes))
-
         mask_water = read_mask(WATER_MASK % image_path + '%s.png'%base_name)
         mask_land = read_mask(LAND_MASK % image_path + '%s.png'%base_name)
         mask_emerg = read_mask(EMERGENT_MASK % image_path +'%s.png'%base_name)
         mask_cera = read_mask(CERA_MASK % image_path + '%s.png'%base_name)
 
         if num_classes == 3:
-            mask[:,:,2] = mask_water[:,:]
-            mask[:,:,1] = mask_land[:,:]
-            mask[:,:,0] = mask_emerg[:,:]
-            mask[:,:,0] += mask_cera[:,:]
+            mask = np.stack([mask_cera + mask_emerg, mask_land, mask_water],
+                            axis=2)
         elif num_classes == 4:
-            mask[:,:,3] = mask_water[:,:]
-            mask[:,:,2] = mask_land[:,:]
-            mask[:,:,1] = mask_emerg[:,:]
-            mask[:,:,0] = mask_cera[:,:]            
+            mask = np.stack([mask_cera, mask_emerg, mask_land, mask_water],
+                            axis=2)
             
         mask = mask/255
         mask_sum = np.sum(mask, axis=2)
