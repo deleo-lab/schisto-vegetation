@@ -386,7 +386,7 @@ def process_heat_map(model, test_image, display, save_filename=None):
     if save_filename != None, the heat map is saved to that file
     """
     test_batch = np.expand_dims(test_image, axis=0)
-    prediction = model.predict(test_batch)
+    prediction = np.squeeze(model.predict(test_batch))
 
     rgb_test_image = transform_rgb_image(test_image)
     grey = np.tensordot(rgb_test_image, GREY_TRANSFORM, 1)
@@ -398,25 +398,28 @@ def process_heat_map(model, test_image, display, save_filename=None):
         grey = grey + 1.0
     grey = grey / 2.0 + 0.5
 
-    # grey is now from 0.5 to 1... a washed out greyscale version
+    # grey is now from 0.5 to 1, a washed out greyscale version
     # of the original image.  the purpose is to make something that
     # can have blue...red...yellow heat map colors imposed on top
 
-    prediction = np.squeeze(prediction)[:, :, 0]
-    blue_prediction = np.maximum(0.4 - prediction, 0.0)
+    cera_prediction = prediction[:, :, 0]
+    blue_prediction = np.maximum(0.4 - cera_prediction, 0.0)
     blue_prediction = np.sqrt(blue_prediction)
-    red_prediction = np.minimum(prediction / 0.4, 1.0)
+    red_prediction = np.minimum(cera_prediction / 0.4, 1.0)
     red_prediction = np.sqrt(red_prediction)
-    green_prediction = np.maximum(np.minimum((prediction - 0.4) / 0.4, 1.0), 0)
+    green_prediction = np.maximum(np.minimum((cera_prediction - 0.4) / 0.4, 1.0), 0)
     heat_map = np.stack([red_prediction, green_prediction,
                          blue_prediction], axis=2)
 
     # now we make a similar image, but just of the classification
     # if the prediction for cera is high enough, yellow, otherwise blue
-    blue_prediction = np.zeros(prediction.shape)
-    blue_prediction[np.where(prediction < 0.5)] = 1
-    green_prediction = 1 - blue_prediction
-    red_prediction = green_prediction
+    classification = np.round(np.squeeze(prediction))
+
+    red_prediction = classification[:, :, 0] + classification[:, :, 1]
+    green_prediction = classification[:, :, 0] + classification[:, :, 2]
+    blue_prediction = classification[:, :, 0]
+    if classification.shape[2] > 3:
+        blue_prediction = blue_prediction + classification[:, :, 3]
     classification = np.stack([red_prediction, green_prediction,
                                blue_prediction], axis=2)
 
