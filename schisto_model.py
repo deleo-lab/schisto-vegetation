@@ -126,7 +126,7 @@ def conv_classifier(learning_rate, classes, input_channels=8):
     conv3 = Conv2D(64, (1, 1), activation = 'elu', padding = 'same', kernel_initializer = 'he_normal')(drop2)
     conv3 = BatchNormalization()(conv3)
     conv4 = Conv2D(32, (1, 1), activation = 'elu', padding = 'same', kernel_initializer = 'he_normal')(conv3)
-    conv5 = Conv2D(classes,1, activation = 'sigmoid')(conv4)
+    conv5 = Conv2D(classes,1, activation = 'softmax')(conv4)
 
     model = tf.keras.Model(inputs=inputs, outputs=conv5)
     model.compile(optimizer = Adam(lr = learning_rate), loss = 'binary_crossentropy', metrics = ['accuracy'])
@@ -152,7 +152,7 @@ def pixel_classifier(learning_rate, classes, input_channels=8):
     conv3 = Conv2D(64, (1, 1), activation = 'elu', padding = 'same', kernel_initializer = 'he_normal')(drop2)
     conv3 = BatchNormalization()(conv3)
     conv4 = Conv2D(32, (1, 1), activation = 'elu', padding = 'same', kernel_initializer = 'he_normal')(conv3)
-    conv5 = Conv2D(classes,1, activation = 'sigmoid')(conv4)
+    conv5 = Conv2D(classes,1, activation = 'softmax')(conv4)
 
     model = tf.keras.Model(inputs=inputs, outputs=conv5)
     model.compile(optimizer = Adam(lr = learning_rate), loss = 'binary_crossentropy', metrics = ['accuracy'])
@@ -228,7 +228,7 @@ def unet(learning_rate, classes, input_channels=8):
     conv9 = Conv2D(32, (3, 3),activation = 'elu', padding = 'same', kernel_initializer = 'he_normal')(merge9)
     conv9 = BatchNormalization()(conv9)
     conv9 = Conv2D(32, (3, 3),activation = 'elu', padding = 'same', kernel_initializer = 'he_normal')(conv9)
-    conv10 = Conv2D(classes,1, activation = 'sigmoid')(conv9)
+    conv10 = Conv2D(classes,1, activation = 'softmax')(conv9)
 
     model = tf.keras.Model(inputs=inputs, outputs=conv10)
     model.compile(optimizer = Adam(lr = learning_rate), loss = 'binary_crossentropy', metrics = ['accuracy'])
@@ -301,8 +301,9 @@ def read_images(num_classes, image_path):
         if np.min(mask_sum) == 0:
             print("Warning: %s has %d unlabeled pixels" %
                   (base_name, len(np.where(mask_sum == 0)[0])))
-        elif np.max(mask_sum) > 1:
-            print("Warning: %s has pixel with multiple labels" % base_name)
+        if np.max(mask_sum) > 1:
+            print("Warning: %s has %d pixels with multiple labels" %
+                  (base_name, len(np.where(mask_sum > 1)[0])))
 
         # use 80% of images for train, 20% for validation
         if len(X_DICT_TRAIN) < len(tif_files) * 0.8:
