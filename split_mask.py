@@ -16,13 +16,6 @@ import sys
 
 import numpy as np
 import skimage.io
-default_splits = {
-    'water_mask':    1,
-    'emergent_mask': 2,
-    'cera_mask':     3,
-    'land_mask':     4,
-}
-
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Split a 4 value mask file into 4 separate masks.')
