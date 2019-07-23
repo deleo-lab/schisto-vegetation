@@ -375,6 +375,31 @@ def train(model, model_filename, train_set, val_set, args):
     if not args.save_best_only:
         model.save(model_filename)
 
+def washed_greyscale(image):
+    """
+    Applies a greyscale transformation to an 8 channel image,
+    then remaps it to be between 0.5 and 1.0 in each channel
+    """
+    rgb_image = transform_rgb_image(image)
+    grey = np.tensordot(rgb_image, GREY_TRANSFORM, 1)
+    grey = np.expand_dims(grey, axis=2)
+    grey = grey - grey.min()
+    if grey.max() > 0.0:
+        grey = grey / grey.max()
+    else:
+        grey = grey + 1.0
+    grey = grey / 2.0 + 0.5
+
+    return grey
+
+def predict_single_image(model, image):
+    """
+    Uses the current model to predict a single image
+    """
+    batch = np.expand_dims(image, axis=0)
+    prediction = np.squeeze(model.predict(batch))
+    return prediction
+
 def process_heat_map(model, test_image, display, save_filename=None):
     """Builds a heat map from the given TIF file
 
@@ -386,18 +411,9 @@ def process_heat_map(model, test_image, display, save_filename=None):
 
     if save_filename != None, the heat map is saved to that file
     """
-    test_batch = np.expand_dims(test_image, axis=0)
-    prediction = np.squeeze(model.predict(test_batch))
+    prediction = predict_single_image(model, test_image)
 
-    rgb_test_image = transform_rgb_image(test_image)
-    grey = np.tensordot(rgb_test_image, GREY_TRANSFORM, 1)
-    grey = np.expand_dims(grey, axis=2)
-    grey = grey - grey.min()
-    if grey.max() > 0.0:
-        grey = grey / grey.max()
-    else:
-        grey = grey + 1.0
-    grey = grey / 2.0 + 0.5
+    grey = washed_greyscale(test_image)
 
     # grey is now from 0.5 to 1, a washed out greyscale version
     # of the original image.  the purpose is to make something that
