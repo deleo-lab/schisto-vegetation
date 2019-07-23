@@ -481,7 +481,7 @@ def process_heat_map_set(model, dataset, in_dir, out_dir):
         # make it three channels, white
         mask = Y[base_name][:,:,0]
         mask = np.stack([mask, mask, mask], axis=2)
-        mask = mask * 255
+        mask = mask * 200
         mask = np.array(mask, dtype=np.int8)
         # add the other masks as R, G, B
         for i in range(1, Y[base_name].shape[2]):
