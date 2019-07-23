@@ -416,7 +416,12 @@ def prediction_to_heat_map(prediction, grey):
     # so the prediction has some texture to it
     heat_map = np.stack([red_prediction, green_prediction,
                          blue_prediction], axis=2)
-    return heat_map * grey
+    heat_map = heat_map * grey
+
+    # map from 0..1 to int8
+    heat_map = heat_map * 255
+    heat_map = np.array(heat_map, dtype=np.int8)
+    return heat_map
 
 def prediction_to_classification(prediction, grey):
     """
@@ -437,7 +442,12 @@ def prediction_to_classification(prediction, grey):
     
     # multiply pixel by pixel with the grey visualization
     # so the classification has some texture to it
-    return classification * grey
+    classification = classification * grey
+
+    # map from 0..1 to int8
+    classification = classification * 255
+    classification = np.array(classification, dtype=np.int8)
+    return classification
 
 
 
@@ -461,15 +471,11 @@ def process_heat_map(model, test_image, display, save_filename=None):
 
     heat_map = prediction_to_heat_map(prediction, grey)
     classification = prediction_to_classification(prediction, grey)
-
+    
     # stack the heat map and the classification side by side
     rgb = np.concatenate([heat_map, classification], axis=1)
-
-    # since values are 0..1, rescale to RGB
-    rgb = rgb * 255
-    rgb = np.array(rgb, dtype=np.int8)
     im = Image.fromarray(rgb, "RGB")
-    
+
     if display:
         im.show()
 
@@ -603,14 +609,14 @@ if __name__ == '__main__':
     To not train, --no_train
 
     Sample command line to retrain new model:
-      python schisto_model.py --save_model foo.h5
+      python schisto_model.py --save_model softmax.h5
 
     Sample command line to show a single heat map:
-      python schisto_model.py --load_model foo.h5 --no_train --heat_map ../training_set/8_bands/28.TIF 
+      python schisto_model.py --load_model softmax.h5 --no_train --heat_map ../training_set/8_bands/28.TIF 
 
     Sample command line to process all of the training and validation
       data into heat maps, with the originals appended to the images:
-      python schisto_model.py --load_model foo.h5 --no_train --heat_map_dir heat_maps
+      python schisto_model.py --load_model softmax.h5 --no_train --heat_map_dir heat_maps
     """
     args = parse_args()
     print_args(args)
