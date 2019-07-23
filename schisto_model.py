@@ -33,6 +33,16 @@ CERA_MASK = '%s/cera_mask/'
 
 STARTING_LR = 4e-5
 
+def default_training_dir():
+    candidates = ['c:/Users/horat/Documents/hai/schisto/training_set',
+                  '/home/john/hai/schisto/training_set']
+    for c in candidates:
+        if os.path.exists(c):
+            return c
+    return candidates[0]
+
+DEFAULT_DIR = default_training_dir()
+
 def random_transform(patch_img, patch_mask):    
     # Apply some random transformations
     random_transformation = np.random.randint(1,8)
@@ -575,7 +585,7 @@ def parse_args():
     parser.add_argument('--heat_map_dir', default=None,
                         help='A dir to save all the heat maps from train & val')
 
-    parser.add_argument('--training_home', default='c:/Users/horat/Documents/hai/schisto/training_set',
+    parser.add_argument('--training_home', default=DEFAULT_DIR,
                         help='Where to get the training data')
     
     args = parser.parse_args()
