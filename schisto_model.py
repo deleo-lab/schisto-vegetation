@@ -400,6 +400,47 @@ def predict_single_image(model, image):
     prediction = np.squeeze(model.predict(batch))
     return prediction
 
+def prediction_to_heat_map(prediction, grey):
+    """
+    Given a prediction and a greyscale image, put the heat map
+    of the first channel of the prediction on top of the greyscale.
+    """
+    cera_prediction = prediction[:, :, 0]
+    blue_prediction = np.maximum(0.4 - cera_prediction, 0.0)
+    blue_prediction = np.sqrt(blue_prediction)
+    red_prediction = np.minimum(cera_prediction / 0.4, 1.0)
+    red_prediction = np.sqrt(red_prediction)
+    green_prediction = np.maximum(np.minimum((cera_prediction - 0.4) / 0.4, 1.0), 0)
+
+    # multiply pixel by pixel with the grey visualization
+    # so the prediction has some texture to it
+    heat_map = np.stack([red_prediction, green_prediction,
+                         blue_prediction], axis=2)
+    return heat_map * grey
+
+def prediction_to_classification(prediction, grey):
+    """
+    Given a prediction and a greyscale image, put prediction classes
+    on top of the heat map.  Only works for up to 4 channels
+    """
+    classification = np.round(np.squeeze(prediction))
+
+    red_prediction = classification[:, :, 0] + classification[:, :, 1]
+    green_prediction = classification[:, :, 0] + classification[:, :, 2]
+    blue_prediction = classification[:, :, 0]
+    if classification.shape[2] > 3:
+        blue_prediction = blue_prediction + classification[:, :, 3]
+    if classification.shape[2] > 4:
+        raise ValueError("Prediction has more than 4 channels")
+    classification = np.stack([red_prediction, green_prediction,
+                               blue_prediction], axis=2)
+    
+    # multiply pixel by pixel with the grey visualization
+    # so the classification has some texture to it
+    return classification * grey
+
+
+
 def process_heat_map(model, test_image, display, save_filename=None):
     """Builds a heat map from the given TIF file
 
@@ -413,42 +454,16 @@ def process_heat_map(model, test_image, display, save_filename=None):
     """
     prediction = predict_single_image(model, test_image)
 
-    grey = washed_greyscale(test_image)
-
-    # grey is now from 0.5 to 1, a washed out greyscale version
+    # grey will be 0.5 to 1, a washed out greyscale version
     # of the original image.  the purpose is to make something that
     # can have blue...red...yellow heat map colors imposed on top
+    grey = washed_greyscale(test_image)
 
-    cera_prediction = prediction[:, :, 0]
-    blue_prediction = np.maximum(0.4 - cera_prediction, 0.0)
-    blue_prediction = np.sqrt(blue_prediction)
-    red_prediction = np.minimum(cera_prediction / 0.4, 1.0)
-    red_prediction = np.sqrt(red_prediction)
-    green_prediction = np.maximum(np.minimum((cera_prediction - 0.4) / 0.4, 1.0), 0)
-    heat_map = np.stack([red_prediction, green_prediction,
-                         blue_prediction], axis=2)
+    heat_map = prediction_to_heat_map(prediction, grey)
+    classification = prediction_to_classification(prediction, grey)
 
-    # now we make a similar image, but just of the classification
-    # if the prediction for cera is high enough, yellow, otherwise blue
-    classification = np.round(np.squeeze(prediction))
-
-    red_prediction = classification[:, :, 0] + classification[:, :, 1]
-    green_prediction = classification[:, :, 0] + classification[:, :, 2]
-    blue_prediction = classification[:, :, 0]
-    if classification.shape[2] > 3:
-        blue_prediction = blue_prediction + classification[:, :, 3]
-    classification = np.stack([red_prediction, green_prediction,
-                               blue_prediction], axis=2)
-
-    vis = np.concatenate([heat_map, classification], axis=1)
-    # grey is the greyscale of the original image
-    # since the visualization is two images side by side,
-    # stack two copies of grey...
-    grey = np.concatenate([grey, grey], axis=1)
-
-    # .. then multiply pixel by pixel with the visualization
-    # so the prediction has some texture to it
-    rgb = vis * grey
+    # stack the heat map and the classification side by side
+    rgb = np.concatenate([heat_map, classification], axis=1)
 
     # since values are 0..1, rescale to RGB
     rgb = rgb * 255
