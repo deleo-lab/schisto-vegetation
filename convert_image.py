@@ -8,9 +8,9 @@ from PIL import Image
 
 # Using the descriptions in the worldview pdf, try to roughly
 # make the channels correspond to visible light channels
-transform = np.array([[ 0,  0,  0, .4, .4, .2, 0, 0],
-                      [ 0, .2, .5, .3,  0,  0, 0, 0],
-                      [.5, .5,  0,  0,  0,  0, 0, 0]]).T
+transform = np.array([[ 0,  0,  0,  0,  0,  1, 0, 0],
+                      [ 0,  0,  1,  0,  0,  0, 0, 0],
+                      [ 0,  1,  0,  0,  0,  0, 0, 0]]).T
 
 def print_min_max(arr):
     """

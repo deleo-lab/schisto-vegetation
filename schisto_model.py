@@ -238,9 +238,9 @@ def unet(learning_rate, classes, input_channels=8):
     return model
 
 # try to map the visible channels to RGB
-SAT_TRANSFORM = np.array([[ 0,  0,  0, .4, .4, .2, 0, 0],
-                          [ 0, .3, .4, .3,  0,  0, 0, 0],
-                          [.3, .4, .3,  0,  0,  0, 0, 0]]).T
+SAT_TRANSFORM = np.array([[ 0,  0,  0,  0,  0,  1, 0, 0],
+                          [ 0,  0,  1,  0,  0,  0, 0, 0],
+                          [ 0,  1,  0,  0,  0,  0, 0, 0]]).T
 
 GREY_TRANSFORM = np.array([0.299, 0.587, 0.114])
 
