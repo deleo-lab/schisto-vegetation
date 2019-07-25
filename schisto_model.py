@@ -245,7 +245,7 @@ SAT_TRANSFORM = np.array([[ 0,  0,  0, .4, .4, .2, 0, 0],
 GREY_TRANSFORM = np.array([0.299, 0.587, 0.114])
 
 def transform_rgb_image(image):
-    rgb = np.tensordot(image, SAT_TRANSFORM, 1) / 2048
+    rgb = np.tensordot(image, SAT_TRANSFORM, 1) / 2047
     return rgb
     
 def read_tif(image_filename):
