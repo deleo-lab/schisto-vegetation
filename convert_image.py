@@ -22,6 +22,9 @@ def print_min_max(arr):
 
 def convert_image(path):
     raw = skimage.io.imread(path)
+    if raw.shape[0] == 8 and raw.shape[2] != 8:
+        raw = np.transpose(raw, axes=(1, 2, 0))
+        print("Transposed 8 bands from 0th dimension to 2nd dimension")
     print_min_max(raw)
     rgb = np.tensordot(raw, transform, 1) / 2047 * 255
     if np.max(rgb) < 0.8 * 255:
