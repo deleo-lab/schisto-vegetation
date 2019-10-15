@@ -17,3 +17,7 @@ split_mask.py turns a single mask with 4 values for the outputs into 4
 straighten_rectangle.py extracts quadrilaterals from images in cases
   where valid input does not fill the entire rectangle.
 
+
+
+Images are read using rasterio, which may require some installation:
+https://rasterio.readthedocs.io/en/stable/installation.html

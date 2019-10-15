@@ -4,6 +4,7 @@ import os
 import random
 
 from PIL import Image
+import rasterio
 import skimage.io as io
 import skimage.transform as trans
 import numpy as np
@@ -257,9 +258,23 @@ GREY_TRANSFORM = np.array([0.299, 0.587, 0.114])
 def transform_rgb_image(image):
     rgb = np.tensordot(image, SAT_TRANSFORM, 1) / 2047
     return rgb
-    
-def read_tif(image_filename):
-    return io.imread(image_filename)
+
+# TODO: refactor with convert_image.py
+def read_8band_tif(image_filename):
+    dataset = rasterio.open(image_filename)
+    if dataset.count == 8:
+        bands = [dataset.read(i) for i in range(1, 9)] # thanks for not indexing by 0
+        raw = np.stack(bands, axis=2)
+        return raw
+    # TODO: images from the original training set get read in as 1
+    # channel, 512x8 images by rasterio.  fixing it like this is
+    # pretty lazy.  should just transform the images in question.  or
+    # maybe this is a bug in rasterio?  i would think 512x512x8 should
+    # be read in as 512 channels of 512x8
+    if dataset.count == 1 and dataset.read(1).shape[1] == 8:
+        return io.imread(image_filename)
+    raise RuntimeError("%s is not an 8 band tif.  Has %d bands.  Unable to process" %
+                       (image_filename, dataset.count))
 
 def read_mask(mask_file):
     return io.imread(mask_file)
@@ -289,7 +304,7 @@ def read_images(num_classes, image_path):
         # note: this image is used later when building heat maps
         # of the directory.  would need to re-read the image if
         # it is manipulated at all here.
-        img_m = read_tif(image_filename)
+        img_m = read_8band_tif(image_filename)
         _, base_name = os.path.split(image_filename) # filename -> 05.TIF
         base_name, _ = os.path.splitext(base_name)   # remove the .TIF
         
@@ -662,7 +677,7 @@ if __name__ == '__main__':
         # TODO: would need to save the best model or just reload it
         # if we ran training and wanted to use the best
         print("Running model on %s" % args.heat_map)
-        process_heat_map(model, read_tif(args.heat_map),
+        process_heat_map(model, read_8band_tif(args.heat_map),
                          display=True, save_filename=args.save_heat_map)
 
     if args.heat_map_dir:
