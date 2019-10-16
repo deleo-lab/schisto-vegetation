@@ -636,7 +636,7 @@ def print_args(args):
     for k in keys:
         print('%s: %s' % (k, args[k]))
         
-if __name__ == '__main__':
+def main():
     """
     Load a model or create a model with random weights.
     Then possibly train it.
@@ -707,3 +707,7 @@ if __name__ == '__main__':
                              args.training_home, args.heat_map_dir)
         process_heat_map_set(model, val_set,
                              args.training_home, args.heat_map_dir)
+
+if __name__ == '__main__':
+    main()
+
