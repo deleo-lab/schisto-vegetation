@@ -282,24 +282,55 @@ def read_mask(mask_file):
 def read_rgb(rgb_file):
     return io.imread(rgb_file)
 
-def read_images(num_classes, image_path):
-    """
-    Reads images from the given path
 
+def split_images(X, Y):
+    """
     20% (could be parametrized) are split off into a val set
     Returns (train_set, val_set) where both training sets are
       (X, Y), input channels & masks
-    If num_classes == 4, four masks are returned, with cera being mask 0
-    If num_classes == 3, cera and emergent plants are combined
     """
     X_DICT_TRAIN = dict()
     Y_DICT_TRAIN = dict()
     X_DICT_VALIDATION = dict()
     Y_DICT_VALIDATION = dict()
 
+    assert X.keys() == Y.keys()
+    files = sorted(X.keys())
+
+    train_len = int(len(files) * 0.8)
+    train_files = files[:train_len]
+    val_files = files[train_len:]
+
+    for base_name in train_files:
+        X_DICT_TRAIN[base_name] = X[base_name]
+        Y_DICT_TRAIN[base_name] = Y[base_name]
+        print ("Train: %s" % base_name)
+
+    for base_name in val_files:
+        X_DICT_VALIDATION[base_name] = X[base_name]
+        Y_DICT_VALIDATION[base_name] = Y[base_name]
+        print ("Val: %s" % base_name)
+
+    train_set = (X_DICT_TRAIN, Y_DICT_TRAIN)
+    val_set = (X_DICT_VALIDATION, Y_DICT_VALIDATION)
+    return train_set, val_set
+
+
+def read_images(num_classes, image_path):
+    """
+    Reads images from the given path
+
+    If num_classes == 4, four masks are returned, with cera being mask 0
+    If num_classes == 3, cera and emergent plants are combined
+
+    Returns (X, Y) where X and Y are dicts from filename to img & mask
+    """
     tif_files = glob.glob(PATH_TIF % image_path + '*.TIF')
     tif_files = sorted(tif_files)
     
+    X = dict()
+    Y = dict()
+
     for image_filename in tif_files:
         # note: this image is used later when building heat maps
         # of the directory.  would need to re-read the image if
@@ -330,22 +361,11 @@ def read_images(num_classes, image_path):
             print("Warning: %s has %d pixels with multiple labels" %
                   (base_name, len(np.where(mask_sum > 1)[0])))
 
-        # use 80% of images for train, 20% for validation
-        if len(X_DICT_TRAIN) < len(tif_files) * 0.8:
-            X_DICT_TRAIN[base_name] = img_m
-            Y_DICT_TRAIN[base_name] = mask
-            dataset = "train"
-        else:
-            X_DICT_VALIDATION[base_name] = img_m
-            Y_DICT_VALIDATION[base_name] = mask
-            dataset = "val"
+        X[base_name] = img_m
+        Y[base_name] = mask
 
-        print('read %s (%s)' % (image_filename, dataset))
-
-    train_set = (X_DICT_TRAIN, Y_DICT_TRAIN)
-    val_set = (X_DICT_VALIDATION, Y_DICT_VALIDATION)
-    return train_set, val_set
-
+    return (X, Y)
+        
 def stack_dataset(dataset):
     """
     Returns the X, Y dicts from read_images as 2 numpy arrays
@@ -668,7 +688,8 @@ if __name__ == '__main__':
             raise RuntimeError("Unknown model type %s" % args.model_type)
 
     if args.train or args.heat_map_dir:
-        train_set, val_set = read_images(num_classes, args.training_home)
+        X, Y = read_images(num_classes, args.training_home)
+        train_set, val_set = split_images(X, Y)
 
     if args.train:
         train(model, args.save_model, train_set, val_set, args)
@@ -685,4 +706,4 @@ if __name__ == '__main__':
         process_heat_map_set(model, train_set,
                              args.training_home, args.heat_map_dir)
         process_heat_map_set(model, val_set,
-                             args.training_home, args.heat_map_dir)        
+                             args.training_home, args.heat_map_dir)
