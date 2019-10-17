@@ -639,6 +639,29 @@ def print_args(args):
     print('ARGS:')
     for k in keys:
         print('%s: %s' % (k, args[k]))
+
+def image_generator(dataset):
+    X, Y = dataset
+    assert X.keys() == Y.keys()
+    for f in X.keys():
+        print("GENERATING %s" % f)
+        yield(X[f][np.newaxis], Y[f][np.newaxis])
+
+def evaluate_dataset(model, num_classes, test_dir):
+    """
+    Run the model on all of the files in the given test_dir
+
+    Minor issues: this runs items one at a time instead of batching them
+    # TODO: stack files somehow.  A couple issues:
+    #   my old laptop can't run 50x512x512x8 sadly
+    #   want to handle datasets with images of different sizes
+    """
+    print("Running test set on %s" % test_dir)
+    test_set = read_images(num_classes, test_dir)
+    print("Number of elements: %d" % len(test_set[0]))
+    results = model.evaluate_generator(image_generator(test_set),
+                                       steps=len(test_set[0]))
+    print('test loss, test_acc:', results)
         
 def main():
     """
@@ -713,16 +736,7 @@ def main():
                              args.train_dir, args.heat_map_dir)
 
     if args.test_dir:
-        print("Running test set on %s" % args.test_dir)
-        test_set = read_images(num_classes, args.test_dir)
-        # TODO: x_test, y_test = stack_dataset(test_set)
-        for test_file in test_set[0].keys():
-            # TODO: stack files somehow.  A couple issues:
-            #   my old laptop can't run 50x512x512x8 sadly
-            #   want to handle images of different sizes
-            results = model.evaluate(test_set[0][test_file][np.newaxis],
-                                     test_set[1][test_file][np.newaxis])
-            print('test loss, test_acc:', results)
+        evaluate_dataset(model, num_classes, args.test_dir)
 
 if __name__ == '__main__':
     main()
