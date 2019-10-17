@@ -376,7 +376,8 @@ def stack_dataset(dataset):
     for k in x_dict.keys():
         X.append(x_dict[k])
         Y.append(y_dict[k])
-    return np.array(X), np.array(Y)
+
+    return np.stack(X), np.stack(Y)
     
 
 def train(model, model_filename, train_set, val_set, args):
@@ -620,8 +621,11 @@ def parse_args():
     parser.add_argument('--heat_map_dir', default=None,
                         help='A dir to save all the heat maps from train & val')
 
-    parser.add_argument('--training_home', default=DEFAULT_DIR,
+    parser.add_argument('--train_dir', default=DEFAULT_DIR,
                         help='Where to get the training data')
+    
+    parser.add_argument('--test_dir', default=None,
+                        help='Where to get test data')
     
     args = parser.parse_args()
     return args
@@ -645,7 +649,7 @@ def main():
     To train:
       python [script name] --save_model [model name]
 
-    Training images will be loaded from --training_home
+    Training images will be loaded from --train_dir
 
     To continue training an existing model, --load_model [model name]
 
@@ -688,7 +692,7 @@ def main():
             raise RuntimeError("Unknown model type %s" % args.model_type)
 
     if args.train or args.heat_map_dir:
-        X, Y = read_images(num_classes, args.training_home)
+        X, Y = read_images(num_classes, args.train_dir)
         train_set, val_set = split_images(X, Y)
 
     if args.train:
@@ -702,12 +706,23 @@ def main():
                          display=True, save_filename=args.save_heat_map)
 
     if args.heat_map_dir:
-        print("Producing heat maps for all of %s" % args.training_home)
+        print("Producing heat maps for all of %s" % args.train_dir)
         process_heat_map_set(model, train_set,
-                             args.training_home, args.heat_map_dir)
+                             args.train_dir, args.heat_map_dir)
         process_heat_map_set(model, val_set,
-                             args.training_home, args.heat_map_dir)
+                             args.train_dir, args.heat_map_dir)
+
+    if args.test_dir:
+        print("Running test set on %s" % args.test_dir)
+        test_set = read_images(num_classes, args.test_dir)
+        # TODO: x_test, y_test = stack_dataset(test_set)
+        for test_file in test_set[0].keys():
+            # TODO: stack files somehow.  A couple issues:
+            #   my old laptop can't run 50x512x512x8 sadly
+            #   want to handle images of different sizes
+            results = model.evaluate(test_set[0][test_file][np.newaxis],
+                                     test_set[1][test_file][np.newaxis])
+            print('test loss, test_acc:', results)
 
 if __name__ == '__main__':
     main()
-
