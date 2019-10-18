@@ -531,10 +531,10 @@ def process_heat_map(model, test_image, display, save_filename=None):
     return rgb
 
     
-def process_heat_map_set(model, dataset, in_dir, out_dir):
+def process_heat_map_set(model, num_classes, in_dir, out_dir):
     if not os.path.exists(out_dir):
         os.makedirs(out_dir)
-    X, Y = dataset
+    X, Y = read_images(num_classes, in_dir)
     files = X.keys()
     for base_name in files:
         print("Processing %s" % base_name)
@@ -714,11 +714,9 @@ def main():
         else:
             raise RuntimeError("Unknown model type %s" % args.model_type)
 
-    if args.train or args.heat_map_dir:
+    if args.train:
         X, Y = read_images(num_classes, args.train_dir)
         train_set, val_set = split_images(X, Y)
-
-    if args.train:
         train(model, args.save_model, train_set, val_set, args)
 
     if args.heat_map:
@@ -730,9 +728,7 @@ def main():
 
     if args.heat_map_dir:
         print("Producing heat maps for all of %s" % args.train_dir)
-        process_heat_map_set(model, train_set,
-                             args.train_dir, args.heat_map_dir)
-        process_heat_map_set(model, val_set,
+        process_heat_map_set(model, num_classes,
                              args.train_dir, args.heat_map_dir)
 
     if args.test_dir:
