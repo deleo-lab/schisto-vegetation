@@ -324,6 +324,20 @@ def read_images(num_classes, image_path):
     If num_classes == 3, cera and emergent plants are combined
 
     Returns (X, Y) where X and Y are dicts from filename to img & mask
+
+    For the snail habitat model, the following organization is expected.
+      dataset
+        - 8_bands: a directory with 8 band tif files
+        - cera_mask: a directory with mask files for floating
+        - emergent_mask, land_mask, water_mask: etc etc
+        - RGB: a directory with RGB conversions of the 8_bands files
+               not necessary except when building heat maps
+    Available filenames are taken from the 8_bands dir.
+    Mask files are expected to be .png files with 0 for no and 255 for yes
+      (this way a human can read them, instead of 0/1 for example)
+    Each file should have a parallel name.  So, for example, 
+      if there is a .tif in 8_bands named 00.tif, there should be
+      corresponding masks 00.png in each of the mask directories.
     """
     tif_files = glob.glob(PATH_TIF % image_path + '*.TIF')
     tif_files = sorted(tif_files)
