@@ -703,6 +703,9 @@ def main():
     Sample command line to process all of the training and validation
       data into heat maps, with the originals appended to the images:
       python schisto_model.py --load_model softmax.h5 --no_train --heat_map_dir heat_maps
+
+    Sample command to test a model:
+      python schisto_model.py --load_model softmax.h5 --no_train --test_dir ../extra_set_trans
     """
     args = parse_args()
     print_args(args)
