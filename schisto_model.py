@@ -277,7 +277,14 @@ def read_8band_tif(image_filename):
                        (image_filename, dataset.count))
 
 def read_mask(mask_file):
-    return io.imread(mask_file)
+    base_name, _ = os.path.splitext(mask_file)   # remove the .TIF
+    candidates = glob.glob(base_name + ".*")
+    if len(candidates) == 0:
+        raise RuntimeError("No mask files found matching %s" % mask_file)
+    elif len(candidates) > 1:
+        raise RuntimeError("Multiple mask files found matching %s" % mask_file)
+
+    return io.imread(candidates[0])
 
 def read_rgb(rgb_file):
     return io.imread(rgb_file)
@@ -339,7 +346,10 @@ def read_images(num_classes, image_path):
       if there is a .tif in 8_bands named 00.tif, there should be
       corresponding masks 00.png in each of the mask directories.
     """
-    tif_files = glob.glob(PATH_TIF % image_path + '*.TIF')
+    tif_path = PATH_TIF % image_path
+    print("Loading images from %s" % tif_path)
+    tif_path = tif_path + '*.[tT][iI][fF]'
+    tif_files = glob.glob(tif_path)
     tif_files = sorted(tif_files)
     
     X = dict()
@@ -351,13 +361,12 @@ def read_images(num_classes, image_path):
         # it is manipulated at all here.
         img_m = read_8band_tif(image_filename)
         _, base_name = os.path.split(image_filename) # filename -> 05.TIF
-        base_name, _ = os.path.splitext(base_name)   # remove the .TIF
         
         #create 3d mask where each channel is the mask for a specific class
-        mask_water = read_mask(WATER_MASK % image_path + '%s.png'%base_name)
-        mask_land = read_mask(LAND_MASK % image_path + '%s.png'%base_name)
-        mask_emerg = read_mask(EMERGENT_MASK % image_path +'%s.png'%base_name)
-        mask_cera = read_mask(CERA_MASK % image_path + '%s.png'%base_name)
+        mask_water = read_mask(WATER_MASK % image_path + base_name)
+        mask_land = read_mask(LAND_MASK % image_path + base_name)
+        mask_emerg = read_mask(EMERGENT_MASK % image_path + base_name)
+        mask_cera = read_mask(CERA_MASK % image_path + base_name)
 
         if num_classes == 3:
             mask = np.stack([mask_cera + mask_emerg, mask_land, mask_water],
