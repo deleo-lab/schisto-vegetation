@@ -322,6 +322,19 @@ def split_images(X, Y):
     val_set = (X_DICT_VALIDATION, Y_DICT_VALIDATION)
     return train_set, val_set
 
+def check_filenames_unique(files):
+    """
+    Check there are no duplicates if ignoring case
+
+    Simple check to make sure there are no confusing filenames such as
+    foo.tif vs foo.TIF.  This can happen on linux (but not windows)
+    """
+    lowered_set = {}
+    for f in files:
+        lf = f.lower()
+        if lf in lowered_set:
+            raise RuntimeError("Confusing filename: %s vs %s" % (f, lowered_set[lf]))
+        lowered_set[lf] = f
 
 def read_images(num_classes, image_path):
     """
@@ -351,6 +364,8 @@ def read_images(num_classes, image_path):
     tif_path = tif_path + '*.[tT][iI][fF]'
     tif_files = glob.glob(tif_path)
     tif_files = sorted(tif_files)
+
+    check_filenames_unique(tif_files)
     
     X = dict()
     Y = dict()
