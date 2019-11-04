@@ -740,6 +740,15 @@ def main():
         num_classes = output.shape[-1]
         print("Loaded model %s.  Number of classes: %d" %
               (args.load_model, num_classes))
+        if num_classes == 4:
+            # relevant if you retrain a model
+            print("Model built to detect snail habitat, using separate ceratophyllum class")
+            args.separate_ceratophyllum = True
+        elif num_classes == 3:
+            print("Model built to detect snail habitat, combining both vegetation classes")
+            args.separate_ceratophyllum = False
+        else:
+            raise ValueError("Unable to use a trained model with %d classes" % num_classes)
     else:
         if args.separate_ceratophyllum:
             num_classes = 4
