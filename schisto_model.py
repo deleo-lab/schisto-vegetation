@@ -454,7 +454,7 @@ def train(model, model_filename, train_set, val_set, args):
                   validation_data=(x_val, y_val),
                   class_weight=class_weight)
         del x_train, y_train
-        print ("Finished epoch %d" % i)
+        print ("Finished epoch %d" % (i+1))
 
     if not args.save_best_only:
         model.save(model_filename)
