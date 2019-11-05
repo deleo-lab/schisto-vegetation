@@ -3,6 +3,8 @@ import glob
 import os
 import random
 
+from enum import Enum
+
 from PIL import Image
 import rasterio
 import skimage.io as io
@@ -19,6 +21,10 @@ import tensorflow.keras.backend as backend
 from tensorflow.keras.callbacks import CSVLogger
 from tensorflow.keras.callbacks import TensorBoard
 from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping, ReduceLROnPlateau
+
+class DataType(Enum):
+    HABITAT_SEPARATE = 1
+    HABITAT_COMBINED = 2
 
 PATCH_SZ = 256   # should divide by 16
 BATCH_SIZE = 8
@@ -118,7 +124,7 @@ def get_patches(dataset, n_patches, sz):
     #print('Generated {} patches'.format(total_patches))
     return np.array(x), np.array(y)
 
-def conv_classifier(learning_rate, classes, input_channels=8):
+def conv_classifier(learning_rate, num_classes, input_channels=8):
     """
     Another simple baseline which only look at single pixels to classify
     Starts with a 3x3 conv, then does a bunch of 1x1 convs
@@ -137,7 +143,7 @@ def conv_classifier(learning_rate, classes, input_channels=8):
     conv3 = Conv2D(64, (1, 1), activation = 'elu', padding = 'same', kernel_initializer = 'he_normal')(drop2)
     conv3 = BatchNormalization()(conv3)
     conv4 = Conv2D(32, (1, 1), activation = 'elu', padding = 'same', kernel_initializer = 'he_normal')(conv3)
-    conv5 = Conv2D(classes,1, activation = 'softmax')(conv4)
+    conv5 = Conv2D(num_classes, 1, activation = 'softmax')(conv4)
 
     model = tf.keras.Model(inputs=inputs, outputs=conv5)
     model.compile(optimizer = Adam(lr = learning_rate), loss = 'binary_crossentropy', metrics = ['accuracy'])
@@ -145,7 +151,7 @@ def conv_classifier(learning_rate, classes, input_channels=8):
     
 
 
-def pixel_classifier(learning_rate, classes, input_channels=8):
+def pixel_classifier(learning_rate, num_classes, input_channels=8):
     """
     A simple baseline which only look at single pixels to classify
 
@@ -163,13 +169,13 @@ def pixel_classifier(learning_rate, classes, input_channels=8):
     conv3 = Conv2D(64, (1, 1), activation = 'elu', padding = 'same', kernel_initializer = 'he_normal')(drop2)
     conv3 = BatchNormalization()(conv3)
     conv4 = Conv2D(32, (1, 1), activation = 'elu', padding = 'same', kernel_initializer = 'he_normal')(conv3)
-    conv5 = Conv2D(classes,1, activation = 'softmax')(conv4)
+    conv5 = Conv2D(num_classes,1, activation = 'softmax')(conv4)
 
     model = tf.keras.Model(inputs=inputs, outputs=conv5)
     model.compile(optimizer = Adam(lr = learning_rate), loss = 'binary_crossentropy', metrics = ['accuracy'])
     return model
     
-def unet(learning_rate, classes, input_channels=8):
+def unet(learning_rate, num_classes, input_channels=8):
     """
     Builds a u-net out of TF Keras layers
 
@@ -239,7 +245,7 @@ def unet(learning_rate, classes, input_channels=8):
     conv9 = Conv2D(32, (3, 3),activation = 'elu', padding = 'same', kernel_initializer = 'he_normal')(merge9)
     conv9 = BatchNormalization()(conv9)
     conv9 = Conv2D(32, (3, 3),activation = 'elu', padding = 'same', kernel_initializer = 'he_normal')(conv9)
-    conv10 = Conv2D(classes,1, activation = 'softmax')(conv9)
+    conv10 = Conv2D(num_classes,1, activation = 'softmax')(conv9)
 
     model = tf.keras.Model(inputs=inputs, outputs=conv10)
     model.compile(optimizer = Adam(lr = learning_rate), loss = 'binary_crossentropy', metrics = ['accuracy'])
@@ -336,12 +342,12 @@ def check_filenames_unique(files):
             raise RuntimeError("Confusing filename: %s vs %s" % (f, lowered_set[lf]))
         lowered_set[lf] = f
 
-def read_images(num_classes, image_path):
+def read_images(data_type, image_path):
     """
     Reads images from the given path
 
-    If num_classes == 4, four masks are returned, with cera being mask 0
-    If num_classes == 3, cera and emergent plants are combined
+    If data_type == HABITAT_SEPARATE, four masks are returned, with cera being mask 0
+    If data_type == HABITAT_COMBINED, cera and emergent plants are combined
 
     Returns (X, Y) where X and Y are dicts from filename to img & mask
 
@@ -383,10 +389,10 @@ def read_images(num_classes, image_path):
         mask_emerg = read_mask(EMERGENT_MASK % image_path + base_name)
         mask_cera = read_mask(CERA_MASK % image_path + base_name)
 
-        if num_classes == 3:
+        if data_type == DataType.HABITAT_COMBINED:
             mask = np.stack([mask_cera + mask_emerg, mask_land, mask_water],
                             axis=2)
-        elif num_classes == 4:
+        elif data_type == DataType.HABITAT_SEPARATE:
             mask = np.stack([mask_cera, mask_emerg, mask_land, mask_water],
                             axis=2)
             
@@ -569,10 +575,10 @@ def process_heat_map(model, test_image, display, save_filename=None):
     return rgb
 
     
-def process_heat_map_set(model, num_classes, in_dir, out_dir):
+def process_heat_map_set(model, data_type, in_dir, out_dir):
     if not os.path.exists(out_dir):
         os.makedirs(out_dir)
-    X, Y = read_images(num_classes, in_dir)
+    X, Y = read_images(data_type, in_dir)
     files = X.keys()
     for base_name in files:
         print("Processing %s" % base_name)
@@ -620,7 +626,7 @@ def parse_args():
                         help=('Filename for loading a model, either as '
                               'a starting point for training or for testing'))
 
-    parser.add_argument('--model_type', default='unet',
+    parser.add_argument('--model_arch', default='unet',
                         help=('Model type to use.  unet, 1x1 pixel classifier, or 3x3 pixel classifier.  unet/pixel_classifier/conv_classifier'))
 
     parser.add_argument('--separate_ceratophyllum',
@@ -685,7 +691,7 @@ def image_generator(dataset):
         print("GENERATING %s" % f)
         yield(X[f][np.newaxis], Y[f][np.newaxis])
 
-def evaluate_dataset(model, num_classes, test_dir):
+def evaluate_dataset(model, data_type, test_dir):
     """
     Run the model on all of the files in the given test_dir
 
@@ -695,7 +701,7 @@ def evaluate_dataset(model, num_classes, test_dir):
     #   want to handle datasets with images of different sizes
     """
     print("Running test set on %s" % test_dir)
-    test_set = read_images(num_classes, test_dir)
+    test_set = read_images(data_type, test_dir)
     print("Number of elements: %d" % len(test_set[0]))
     results = model.evaluate_generator(image_generator(test_set),
                                        steps=len(test_set[0]))
@@ -744,28 +750,32 @@ def main():
             # relevant if you retrain a model
             print("Model built to detect snail habitat, using separate ceratophyllum class")
             args.separate_ceratophyllum = True
+            data_type = DataType.HABITAT_SEPARATE
         elif num_classes == 3:
             print("Model built to detect snail habitat, combining both vegetation classes")
             args.separate_ceratophyllum = False
+            data_type = DataType.HABITAT_COMBINED
         else:
             raise ValueError("Unable to use a trained model with %d classes" % num_classes)
     else:
         if args.separate_ceratophyllum:
             num_classes = 4
+            data_type = DataType.HABITAT_SEPARATE
         else:
             num_classes = 3
+            data_type = DataType.HABITAT_COMBINED
 
-        if args.model_type == 'unet':
+        if args.model_arch == 'unet':
             model = unet(STARTING_LR, num_classes)
-        elif args.model_type == 'pixel_classifier':
+        elif args.model_arch == 'pixel_classifier':
             model = pixel_classifier(STARTING_LR, num_classes)
-        elif args.model_type == 'conv_classifier':
+        elif args.model_arch == 'conv_classifier':
             model = conv_classifier(STARTING_LR, num_classes)
         else:
-            raise RuntimeError("Unknown model type %s" % args.model_type)
+            raise RuntimeError("Unknown model type %s" % args.model_arch)
 
     if args.train:
-        X, Y = read_images(num_classes, args.train_dir)
+        X, Y = read_images(data_type, args.train_dir)
         train_set, val_set = split_images(X, Y)
         train(model, args.save_model, train_set, val_set, args)
 
@@ -778,11 +788,11 @@ def main():
 
     if args.heat_map_dir:
         print("Producing heat maps for all of %s" % args.train_dir)
-        process_heat_map_set(model, num_classes,
+        process_heat_map_set(model, data_type,
                              args.train_dir, args.heat_map_dir)
 
     if args.test_dir:
-        evaluate_dataset(model, num_classes, args.test_dir)
+        evaluate_dataset(model, data_type, args.test_dir)
 
 if __name__ == '__main__':
     main()
