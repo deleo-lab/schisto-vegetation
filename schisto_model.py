@@ -190,6 +190,8 @@ def unet(learning_rate, num_classes, input_channels=8):
     Note that the input size is unconstrained, as the network will
     operate on any size image (past a certain minimum)
     """
+    # TODO: https://datascience.stackexchange.com/questions/26942/
+    # Update with concat layer that doesn't barf on slightly different sizes
     inputs = Input((None, None, input_channels))
     conv1 = Conv2D(32, (3, 3), activation = 'elu', padding = 'same', kernel_initializer = 'he_normal')(inputs)
     # TODO: it might be better to separate activation so that it goes
