@@ -25,6 +25,11 @@ from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping, ReduceLRO
 class DataType(Enum):
     HABITAT_SEPARATE = 1
     HABITAT_COMBINED = 2
+    VILLAGE = 3
+
+class ModelType(Enum):
+    HABITAT = 1
+    VILLAGE = 2
 
 PATCH_SZ = 256   # should divide by 16
 BATCH_SIZE = 8
@@ -37,6 +42,8 @@ WATER_MASK = '%s/water_mask/'
 LAND_MASK = '%s/land_mask/'
 EMERGENT_MASK = '%s/emergent_mask/'
 CERA_MASK = '%s/cera_mask/'
+
+VILLAGE_MASK = '%s/village/'
 
 STARTING_LR = 4e-5
 
@@ -283,6 +290,11 @@ def read_8band_tif(image_filename):
                        (image_filename, dataset.count))
 
 def read_mask(mask_file):
+    """
+    Reads in a mask file, converts it to 0/1
+
+    Anything > 0 is treated as masked
+    """
     base_name, _ = os.path.splitext(mask_file)   # remove the .TIF
     candidates = glob.glob(base_name + ".*")
     if len(candidates) == 0:
@@ -290,7 +302,9 @@ def read_mask(mask_file):
     elif len(candidates) > 1:
         raise RuntimeError("Multiple mask files found matching %s" % mask_file)
 
-    return io.imread(candidates[0])
+    mask = io.imread(candidates[0])
+    mask[mask > 0] = 1
+    return mask
 
 def read_rgb(rgb_file):
     return io.imread(rgb_file)
@@ -348,6 +362,7 @@ def read_images(data_type, image_path):
 
     If data_type == HABITAT_SEPARATE, four masks are returned, with cera being mask 0
     If data_type == HABITAT_COMBINED, cera and emergent plants are combined
+    If data_type == VILLAGE, we just load village data
 
     Returns (X, Y) where X and Y are dicts from filename to img & mask
 
@@ -382,21 +397,27 @@ def read_images(data_type, image_path):
         # it is manipulated at all here.
         img_m = read_8band_tif(image_filename)
         _, base_name = os.path.split(image_filename) # filename -> 05.TIF
-        
-        #create 3d mask where each channel is the mask for a specific class
-        mask_water = read_mask(WATER_MASK % image_path + base_name)
-        mask_land = read_mask(LAND_MASK % image_path + base_name)
-        mask_emerg = read_mask(EMERGENT_MASK % image_path + base_name)
-        mask_cera = read_mask(CERA_MASK % image_path + base_name)
 
-        if data_type == DataType.HABITAT_COMBINED:
-            mask = np.stack([mask_cera + mask_emerg, mask_land, mask_water],
-                            axis=2)
-        elif data_type == DataType.HABITAT_SEPARATE:
-            mask = np.stack([mask_cera, mask_emerg, mask_land, mask_water],
-                            axis=2)
-            
-        mask = mask/255
+        if data_type == DataType.VILLAGE:
+            mask_village = read_mask(VILLAGE_MASK % image_path + base_name)
+            mask_no_village = 1 - mask_village
+            mask = np.stack([mask_no_village, mask_village], axis=2)
+        elif data_type in (DataType.HABITAT_COMBINED, DataType.HABITAT_SEPARATE):
+            #create 3d mask where each channel is the mask for a specific class
+            mask_water = read_mask(WATER_MASK % image_path + base_name)
+            mask_land = read_mask(LAND_MASK % image_path + base_name)
+            mask_emerg = read_mask(EMERGENT_MASK % image_path + base_name)
+            mask_cera = read_mask(CERA_MASK % image_path + base_name)
+
+            if data_type == DataType.HABITAT_COMBINED:
+                mask = np.stack([mask_cera + mask_emerg, mask_land, mask_water],
+                                axis=2)
+            elif data_type == DataType.HABITAT_SEPARATE:
+                mask = np.stack([mask_cera, mask_emerg, mask_land, mask_water],
+                                axis=2)
+        else:
+            raise ValueError("Unknown data_type {}".format(data_type))
+                
         mask_sum = np.sum(mask, axis=2)
         if np.min(mask_sum) == 0:
             print("Warning: %s has %d unlabeled pixels" %
@@ -629,6 +650,10 @@ def parse_args():
     parser.add_argument('--model_arch', default='unet',
                         help=('Model type to use.  unet, 1x1 pixel classifier, or 3x3 pixel classifier.  unet/pixel_classifier/conv_classifier'))
 
+    parser.add_argument('--model_type', default=ModelType.HABITAT,
+                        type=lambda x: ModelType[x.upper()],
+                        help=('Model type to use: habitat or village'))
+    
     parser.add_argument('--separate_ceratophyllum',
                         dest='separate_ceratophyllum',
                         default=True, action='store_true',
@@ -670,7 +695,7 @@ def parse_args():
     
     parser.add_argument('--test_dir', default=None,
                         help='Where to get test data')
-    
+
     args = parser.parse_args()
     return args
 
@@ -750,15 +775,26 @@ def main():
             # relevant if you retrain a model
             print("Model built to detect snail habitat, using separate ceratophyllum class")
             args.separate_ceratophyllum = True
+            args.model_type = ModelType.HABITAT
             data_type = DataType.HABITAT_SEPARATE
         elif num_classes == 3:
             print("Model built to detect snail habitat, combining both vegetation classes")
             args.separate_ceratophyllum = False
+            args.model_type = ModelType.HABITAT
             data_type = DataType.HABITAT_COMBINED
+        elif num_classes == 2:
+            # TODO: use some better way to store habitat vs village, such as saving the
+            # enum with the model (need to figure out how)
+            print("Model built to detect villages")
+            args.model_type = ModelType.VILLAGE
+            data_type = DataType.VILLAGE
         else:
             raise ValueError("Unable to use a trained model with %d classes" % num_classes)
     else:
-        if args.separate_ceratophyllum:
+        if args.model_type == ModelType.VILLAGE:
+            num_classes = 2
+            data_type = DataType.VILLAGE
+        elif args.model_type == ModelType.HABITAT and args.separate_ceratophyllum:
             num_classes = 4
             data_type = DataType.HABITAT_SEPARATE
         else:
