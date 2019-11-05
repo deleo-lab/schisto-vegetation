@@ -541,13 +541,19 @@ def prediction_to_classification(prediction, grey):
     """
     classification = np.round(np.squeeze(prediction))
 
-    red_prediction = classification[:, :, 0] + classification[:, :, 1]
-    green_prediction = classification[:, :, 0] + classification[:, :, 2]
-    blue_prediction = classification[:, :, 0]
-    if classification.shape[2] > 3:
-        blue_prediction = blue_prediction + classification[:, :, 3]
-    if classification.shape[2] > 4:
-        raise ValueError("Prediction has more than 4 channels")
+    channels = classification.shape[2]
+    if channels == 2:
+        red_prediction = classification[:, :, 0]
+        green_prediction = classification[:, :, 1]
+        blue_prediction = np.zeros_like(green_prediction)
+    elif channels == 3 or channels == 4:
+        red_prediction = classification[:, :, 0] + classification[:, :, 1]
+        green_prediction = classification[:, :, 0] + classification[:, :, 2]
+        blue_prediction = classification[:, :, 0]
+        if classification.shape[2] == 4:
+            blue_prediction = blue_prediction + classification[:, :, 3]
+    else:
+        raise ValueError("Prediction has unhandled number of channels: %d" % channels)
     classification = np.stack([red_prediction, green_prediction,
                                blue_prediction], axis=2)
     
