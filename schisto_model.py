@@ -131,7 +131,7 @@ def get_patches(dataset, n_patches, sz):
     #print('Generated {} patches'.format(total_patches))
     return np.array(x), np.array(y)
 
-def conv_classifier(learning_rate, num_classes, input_channels=8):
+def conv_classifier(learning_rate, num_classes, model_name, input_channels=8):
     """
     Another simple baseline which only look at single pixels to classify
     Starts with a 3x3 conv, then does a bunch of 1x1 convs
@@ -152,13 +152,13 @@ def conv_classifier(learning_rate, num_classes, input_channels=8):
     conv4 = Conv2D(32, (1, 1), activation = 'elu', padding = 'same', kernel_initializer = 'he_normal')(conv3)
     conv5 = Conv2D(num_classes, 1, activation = 'softmax')(conv4)
 
-    model = tf.keras.Model(inputs=inputs, outputs=conv5)
+    model = tf.keras.Model(inputs=inputs, outputs=conv5, name=model_name)
     model.compile(optimizer = Adam(lr = learning_rate), loss = 'binary_crossentropy', metrics = ['accuracy'])
     return model
     
 
 
-def pixel_classifier(learning_rate, num_classes, input_channels=8):
+def pixel_classifier(learning_rate, num_classes, model_name, model_input_channels=8):
     """
     A simple baseline which only look at single pixels to classify
 
@@ -178,11 +178,11 @@ def pixel_classifier(learning_rate, num_classes, input_channels=8):
     conv4 = Conv2D(32, (1, 1), activation = 'elu', padding = 'same', kernel_initializer = 'he_normal')(conv3)
     conv5 = Conv2D(num_classes,1, activation = 'softmax')(conv4)
 
-    model = tf.keras.Model(inputs=inputs, outputs=conv5)
+    model = tf.keras.Model(inputs=inputs, outputs=conv5, name=model_name)
     model.compile(optimizer = Adam(lr = learning_rate), loss = 'binary_crossentropy', metrics = ['accuracy'])
     return model
     
-def unet(learning_rate, num_classes, input_channels=8):
+def unet(learning_rate, num_classes, model_name, input_channels=8):
     """
     Builds a u-net out of TF Keras layers
 
@@ -256,7 +256,7 @@ def unet(learning_rate, num_classes, input_channels=8):
     conv9 = Conv2D(32, (3, 3),activation = 'elu', padding = 'same', kernel_initializer = 'he_normal')(conv9)
     conv10 = Conv2D(num_classes,1, activation = 'softmax')(conv9)
 
-    model = tf.keras.Model(inputs=inputs, outputs=conv10)
+    model = tf.keras.Model(inputs=inputs, outputs=conv10, name=model_name)
     model.compile(optimizer = Adam(lr = learning_rate), loss = 'binary_crossentropy', metrics = ['accuracy'])
     
     #model.summary()
@@ -809,12 +809,13 @@ def main():
             num_classes = 3
             data_type = DataType.HABITAT_COMBINED
 
+        model_name = args.model_arch + ":" + data_type.name
         if args.model_arch == 'unet':
-            model = unet(STARTING_LR, num_classes)
+            model = unet(STARTING_LR, num_classes, model_name)
         elif args.model_arch == 'pixel_classifier':
-            model = pixel_classifier(STARTING_LR, num_classes)
+            model = pixel_classifier(STARTING_LR, num_classes, model_name)
         elif args.model_arch == 'conv_classifier':
-            model = conv_classifier(STARTING_LR, num_classes)
+            model = conv_classifier(STARTING_LR, num_classes, model_name)
         else:
             raise RuntimeError("Unknown model type %s" % args.model_arch)
 
