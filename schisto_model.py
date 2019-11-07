@@ -31,6 +31,11 @@ class ModelType(Enum):
     HABITAT = 1
     VILLAGE = 2
 
+class ModelArch(Enum):
+    UNET = 1
+    PIXEL = 2
+    CONV = 3
+
 PATCH_SZ = 256   # should divide by 16
 BATCH_SIZE = 8
 TRAIN_SZ = 50  # train size
@@ -655,8 +660,9 @@ def parse_args():
                         help=('Filename for loading a model, either as '
                               'a starting point for training or for testing'))
 
-    parser.add_argument('--model_arch', default='unet',
-                        help=('Model type to use.  unet, 1x1 pixel classifier, or 3x3 pixel classifier.  unet/pixel_classifier/conv_classifier'))
+    parser.add_argument('--model_arch', default=ModelArch.UNET,
+                        type=lambda x: ModelArch[x.upper()],
+                        help=('Model architecture to use.  unet, 1x1 pixel classifier, or 3x3 conv pixel classifier.  unet/pixel/conv'))
 
     parser.add_argument('--model_type', default=ModelType.HABITAT,
                         type=lambda x: ModelType[x.upper()],
@@ -779,25 +785,24 @@ def main():
         num_classes = output.shape[-1]
         print("Loaded model %s.  Number of classes: %d" %
               (args.load_model, num_classes))
-        if num_classes == 4:
+        print("Model description: %s" % model.name)
+        model_arch, data_type = model.name.split(":")[:2]
+        model_arch = ModelArch[model_arch]
+        data_type = DataType[data_type]
+        if data_type == DataType.HABITAT_SEPARATE:
             # relevant if you retrain a model
             print("Model built to detect snail habitat, using separate ceratophyllum class")
             args.separate_ceratophyllum = True
             args.model_type = ModelType.HABITAT
-            data_type = DataType.HABITAT_SEPARATE
-        elif num_classes == 3:
+        elif data_type == DataType.HABITAT_COMBINED:
             print("Model built to detect snail habitat, combining both vegetation classes")
             args.separate_ceratophyllum = False
             args.model_type = ModelType.HABITAT
-            data_type = DataType.HABITAT_COMBINED
-        elif num_classes == 2:
-            # TODO: use some better way to store habitat vs village, such as saving the
-            # enum with the model (need to figure out how)
+        elif data_type == DataType.VILLAGE:
             print("Model built to detect villages")
             args.model_type = ModelType.VILLAGE
-            data_type = DataType.VILLAGE
         else:
-            raise ValueError("Unable to use a trained model with %d classes" % num_classes)
+            raise ValueError("Unable to determine data type to use: %s" % data_type.name)
     else:
         if args.model_type == ModelType.VILLAGE:
             num_classes = 2
@@ -805,19 +810,22 @@ def main():
         elif args.model_type == ModelType.HABITAT and args.separate_ceratophyllum:
             num_classes = 4
             data_type = DataType.HABITAT_SEPARATE
-        else:
+        elif args.model_type == ModelType.HABITAT and not args.separate_ceratophyllum:
             num_classes = 3
             data_type = DataType.HABITAT_COMBINED
+        else:
+            raise RuntimeError("Unknown model type %s" % args.model_type.name)
 
-        model_name = args.model_arch + ":" + data_type.name
-        if args.model_arch == 'unet':
+        model_name = args.model_arch.name + ":" + data_type.name
+        print("Model description: %s" % model_name)
+        if args.model_arch == ModelArch.UNET:
             model = unet(STARTING_LR, num_classes, model_name)
-        elif args.model_arch == 'pixel_classifier':
+        elif args.model_arch == ModelArch.PIXEL:
             model = pixel_classifier(STARTING_LR, num_classes, model_name)
-        elif args.model_arch == 'conv_classifier':
+        elif args.model_arch == ModelArch.CONV:
             model = conv_classifier(STARTING_LR, num_classes, model_name)
         else:
-            raise RuntimeError("Unknown model type %s" % args.model_arch)
+            raise RuntimeError("Unknown model architecture %s" % args.model_arch.name)
 
     if args.train:
         X, Y = read_images(data_type, args.train_dir)
