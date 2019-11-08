@@ -514,8 +514,15 @@ def predict_single_image(model, image):
     """
     Uses the current model to predict a single image
     """
-    batch = np.expand_dims(image, axis=0)
-    prediction = np.squeeze(model.predict(batch))
+    if len(image.shape) == 3:
+        batch = np.expand_dims(image, axis=0)
+    else:
+        batch = image
+
+    prediction = model.predict(batch)
+
+    if len(image.shape) == 3:
+        prediction = np.squeeze(prediction)
     return prediction
 
 def prediction_to_heat_map(prediction, grey):
@@ -747,7 +754,7 @@ def evaluate_dataset(model, data_type, test_dir):
     #print('test loss, test_acc:', results)
     confusion = None
     for X, Y_true in image_generator(test_set):
-        Y_pred = model.predict(X)
+        Y_pred = predict_single_image(model, X)
         axis = len(Y_true.shape) - 1
         Y_pred = np.argmax(Y_pred, axis=axis)
         Y_true = np.argmax(Y_true, axis=axis)
