@@ -708,7 +708,9 @@ def parse_args():
     parser.add_argument('--save_heat_map', default=None,
                         help='Where to save the heat map, if applicable')
     parser.add_argument('--heat_map_dir', default=None,
-                        help='A dir to save all the heat maps from train & val')
+                        help='Generate heat maps from this directory')
+    parser.add_argument('--heat_map_save_dir', default=None,
+                        help='A dir to save all the heat maps.  Will use --heat_map_dir if specified, otherwise will use --train_dir')
 
     parser.add_argument('--train_dir', default=DEFAULT_DIR,
                         help='Where to get the training data')
@@ -763,10 +765,29 @@ def evaluate_dataset(model, data_type, test_dir):
             confusion = confusion + sklearn.metrics.confusion_matrix(Y_true.flatten(), Y_pred.flatten())
     # TODO: pretty print this with labels and everything
     print(confusion)
-        
-def main():
+
+def choose_heat_map_save_dir(args):
     """
-    Load a model or create a model with random weights.
+    Choose a place to save heat maps based on the user args.
+
+    Obviously the easiest place to put them is if the user specifies a save dir...
+    """
+    if args.heat_map_save_dir:
+        return args.heat_map_save_dir
+    candidate = os.path.join(os.getcwd(), "heat_maps")
+    if not os.path.exists(candidate):
+        os.makedirs(candidate)
+        return candidate
+    if not args.heat_map_dir:
+        return None
+    candidate = args.heat_map_dir + "_heat_maps"
+    if not os.path.exists(candidate):
+        os.makedirs(candidate)
+        return candidate
+    return None
+
+def main():
+    """Load a model or create a model with random weights.
     Then possibly train it.
     Finally, possibly display a heat map for a given image.
 
@@ -788,14 +809,18 @@ def main():
       python schisto_model.py --load_model softmax.h5 --no_train --process_heat_map ../training_set/8_bands/28.TIF
       python schisto_model.py --load_model softmax.h5 --no_train --process_heat_map ../training_set/8_bands/28.TIF --save_heat_map 28_heat_map.bmp
 
-    Sample command line to process all of the training and validation
-      data into heat maps, with the originals appended to the images:
-      python schisto_model.py --load_model softmax.h5 --no_train --heat_map_dir heat_maps
+    Sample command line to process a directory data into heat maps,
+      with the originals appended to the images.
+      If --heat_map_dir is specified, will try to use that directory
+      for the images.  Otherwise will use train_dir
+
+      python schisto_model.py --load_model softmax.h5 --no_train --heat_map_save_dir heat_maps
 
     Sample command to test a model:
       python schisto_model.py --load_model softmax.h5 --no_train --test_dir ../extra_set_trans
 
       python -u schisto_model.py --save_model village.h5 --train_dir ../village_set --model_type village --val_patches
+
     """
     args = parse_args()
     print_args(args)
@@ -860,10 +885,18 @@ def main():
         process_heat_map(model, read_8band_tif(args.process_heat_map),
                          display=True, save_filename=args.save_heat_map)
 
-    if args.heat_map_dir:
-        print("Producing heat maps for all of %s" % args.train_dir)
-        process_heat_map_set(model, data_type,
-                             args.train_dir, args.heat_map_dir)
+    if args.heat_map_dir or args.heat_map_save_dir:
+        heat_map_dir = args.heat_map_dir
+        if not heat_map_dir:
+            heat_map_dir = args.train_dir
+        heat_map_save_dir = choose_heat_map_save_dir(args)
+        if heat_map_save_dir:
+            print("Producing heat maps for all of %s" % heat_map_dir)
+            print("Heat maps saved to %s" % heat_map_save_dir)
+            process_heat_map_set(model, data_type,
+                                 heat_map_dir, heat_map_save_dir)
+        else:
+            print("Unable to determine where to save heat maps.  Skipping.  Try setting --heat_map_save_dir")
 
     if args.test_dir:
         evaluate_dataset(model, data_type, args.test_dir)
