@@ -623,8 +623,7 @@ def process_heat_map_set(model, data_type, in_dir, out_dir):
     files = X.keys()
     for base_name in files:
         print("Processing %s" % base_name)
-        # base_name should already have the .tif split off
-        save_filename = os.path.join(out_dir, base_name + ".bmp")
+        save_filename = os.path.join(out_dir, os.path.splitext(base_name)[0] + ".bmp")
         test_image = X[base_name]
 
         heat_map = process_heat_map(model, test_image, display=False)
