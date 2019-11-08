@@ -703,7 +703,7 @@ def parse_args():
                         action='store_false',
                         help="Save all the models.  Gets quite expensive")
 
-    parser.add_argument('--heat_map', default=None,
+    parser.add_argument('--process_heat_map', default=None,
                         help='A file on which to run the model')
     parser.add_argument('--save_heat_map', default=None,
                         help='Where to save the heat map, if applicable')
@@ -777,7 +777,7 @@ def main():
 
     To continue training an existing model, --load_model [model name]
 
-    To display a heat map, --heat_map [8 channel .TIF image]
+    To display a heat map, --process_heat_map [8 channel .TIF image]
 
     To not train, --no_train
 
@@ -785,7 +785,8 @@ def main():
       python schisto_model.py --save_model softmax.h5
 
     Sample command line to show a single heat map:
-      python schisto_model.py --load_model softmax.h5 --no_train --heat_map ../training_set/8_bands/28.TIF 
+      python schisto_model.py --load_model softmax.h5 --no_train --process_heat_map ../training_set/8_bands/28.TIF
+      python schisto_model.py --load_model softmax.h5 --no_train --process_heat_map ../training_set/8_bands/28.TIF --save_heat_map 28_heat_map.bmp
 
     Sample command line to process all of the training and validation
       data into heat maps, with the originals appended to the images:
@@ -852,11 +853,11 @@ def main():
         train_set, val_set = split_images(X, Y)
         train(model, args.save_model, train_set, val_set, args)
 
-    if args.heat_map:
+    if args.process_heat_map:
         # TODO: would need to save the best model or just reload it
         # if we ran training and wanted to use the best
-        print("Running model on %s" % args.heat_map)
-        process_heat_map(model, read_8band_tif(args.heat_map),
+        print("Running model on %s" % args.process_heat_map)
+        process_heat_map(model, read_8band_tif(args.process_heat_map),
                          display=True, save_filename=args.save_heat_map)
 
     if args.heat_map_dir:
