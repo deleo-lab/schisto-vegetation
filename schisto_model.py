@@ -9,13 +9,14 @@ from PIL import Image
 import rasterio
 import skimage.io as io
 import skimage.transform as trans
+import sklearn.metrics
 import numpy as np
 
 import tensorflow as tf
 
 from tensorflow.keras.layers import *
 from tensorflow.keras.optimizers import *
-from tensorflow.keras.callbacks import ModelCheckpoint, LearningRateScheduler
+from tensorflow.keras.callbacks import LearningRateScheduler
 import tensorflow.keras.backend as backend
 
 from tensorflow.keras.callbacks import CSVLogger
@@ -160,7 +161,6 @@ def conv_classifier(learning_rate, num_classes, model_name, input_channels=8):
     model = tf.keras.Model(inputs=inputs, outputs=conv5, name=model_name)
     model.compile(optimizer = Adam(lr = learning_rate), loss = 'binary_crossentropy', metrics = ['accuracy'])
     return model
-    
 
 
 def pixel_classifier(learning_rate, num_classes, model_name, model_input_channels=8):
@@ -742,9 +742,21 @@ def evaluate_dataset(model, data_type, test_dir):
     print("Running test set on %s" % test_dir)
     test_set = read_images(data_type, test_dir)
     print("Number of elements: %d" % len(test_set[0]))
-    results = model.evaluate_generator(image_generator(test_set),
-                                       steps=len(test_set[0]))
-    print('test loss, test_acc:', results)
+    #results = model.evaluate_generator(image_generator(test_set),
+    #                                   steps=len(test_set[0]))
+    #print('test loss, test_acc:', results)
+    confusion = None
+    for X, Y_true in image_generator(test_set):
+        Y_pred = model.predict(X)
+        axis = len(Y_true.shape) - 1
+        Y_pred = np.argmax(Y_pred, axis=axis)
+        Y_true = np.argmax(Y_true, axis=axis)
+        if confusion is None:
+            confusion = sklearn.metrics.confusion_matrix(Y_true.flatten(), Y_pred.flatten())
+        else:
+            confusion = confusion + sklearn.metrics.confusion_matrix(Y_true.flatten(), Y_pred.flatten())
+    # TODO: pretty print this with labels and everything
+    print(confusion)
         
 def main():
     """
