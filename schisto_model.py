@@ -787,6 +787,8 @@ def main():
 
     Sample command to test a model:
       python schisto_model.py --load_model softmax.h5 --no_train --test_dir ../extra_set_trans
+
+      python -u schisto_model.py --save_model village.h5 --train_dir ../village_set --model_type village --val_patches
     """
     args = parse_args()
     print_args(args)
