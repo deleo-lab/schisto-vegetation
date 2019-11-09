@@ -437,17 +437,57 @@ def read_images(data_type, image_path):
         Y[base_name] = mask
 
     return (X, Y)
-        
+
 def stack_dataset(dataset):
     """
     Returns the X, Y dicts from read_images as 2 numpy arrays
     """
     x_dict, y_dict = dataset
+
+    if x_dict.keys() != y_dict.keys():
+        raise RuntimeError("Got different input and label names")
+
     X = []
     Y = []
+    keys = []
     for k in x_dict.keys():
-        X.append(x_dict[k])
-        Y.append(y_dict[k])
+        x = x_dict[k]
+        y = y_dict[k]
+        keys.append(k)
+
+        if x.shape[:2] != y.shape[:2]:
+            raise RuntimeError("Val set error: %s input has different shape from mask" % k)
+
+        # TODO: make 16 a constant
+        # TODO: only do this for unet, not the other model arch
+        if x.shape[0] % 16 != 0 or x.shape[1] % 16 != 0:
+            new_shape = (x.shape[0] - x.shape[0] % 16,
+                         x.shape[1] - x.shape[1] % 16)
+            print("Warning: {} has shape {}, and the u-net expects multiples of 16.  Trimming to {}"
+                  .format(k, x.shape[:2], new_shape))
+            x = x[:new_shape[0], :new_shape[1], :]
+            y = y[:new_shape[0], :new_shape[1], :]
+
+        X.append(x)
+        Y.append(y)
+
+    new_shape = (min(x.shape[0] for x in X),
+                 min(x.shape[1] for x in X))
+
+    if (max(x.shape[0] for x in X) > new_shape[0] or
+        max(x.shape[1] for x in X) > new_shape[1]):
+        for index, k in enumerate(keys):
+            if (x[index].shape[0] > new_shape[0] or
+                x[index].shape[1] > new_shape[1]):
+                print("Warning: Some of the files in the val set are larger than the others " +
+                      "and will need to be trimmed to stack them all together.  " +
+                      "To avoid this, use --val_patches, although that means smaller " +
+                      "val objects will be used in that case.  One example problem file: %s" % k)
+                break
+
+
+    X = map(lambda x: x[:new_shape[0], :new_shape[1], :], X)
+    Y = map(lambda y: y[:new_shape[0], :new_shape[1], :], Y)
 
     return np.stack(X), np.stack(Y)
     
