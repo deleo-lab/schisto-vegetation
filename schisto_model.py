@@ -754,6 +754,23 @@ def image_generator(dataset):
         print("GENERATING %s" % f)
         yield(X[f][np.newaxis], Y[f][np.newaxis])
 
+def pretty_confusion(confusion):
+    """
+    Given a confusion matrix, print out the matrix with GUESS and TRUE labels
+    """
+    confusion_text = "{}".format(confusion)
+    lines = confusion_text.split('\n')
+    if len(lines) < 4:
+        lines.extend(4 - len(lines))
+    text = "TRUE"
+    if len(lines) > 4:
+        text = text + ' ' * (len(lines) - 4)
+    new_lines = ["      GUESS"]
+    for i, line in enumerate(lines):
+        new_lines.append(text[i] + ' ' + line)
+    return "\n".join(new_lines)
+    
+        
 def evaluate_dataset(model, data_type, test_dir):
     """
     Run the model on all of the files in the given test_dir
@@ -779,8 +796,9 @@ def evaluate_dataset(model, data_type, test_dir):
             confusion = sklearn.metrics.confusion_matrix(Y_true.flatten(), Y_pred.flatten())
         else:
             confusion = confusion + sklearn.metrics.confusion_matrix(Y_true.flatten(), Y_pred.flatten())
-    # TODO: pretty print this with labels and everything
-    print(confusion)
+    print(pretty_confusion(confusion))
+    accuracy = np.sum(np.diag(confusion)) / np.sum(confusion)
+    print("Overall accuracy: {}".format(accuracy))
 
 def choose_heat_map_save_dir(args):
     """
