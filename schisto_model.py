@@ -7,10 +7,12 @@ from enum import Enum
 
 from PIL import Image
 import rasterio
-import skimage.io as io
+import skimage.io
 import skimage.transform as trans
 import sklearn.metrics
 import numpy as np
+
+import image_utils
 
 import tensorflow as tf
 
@@ -268,33 +270,7 @@ def unet(learning_rate, num_classes, model_name, input_channels=8):
 
     return model
 
-# try to map the visible channels to RGB
-SAT_TRANSFORM = np.array([[ 0,  0,  0,  0,  0,  1, 0, 0],
-                          [ 0,  0,  1,  0,  0,  0, 0, 0],
-                          [ 0,  1,  0,  0,  0,  0, 0, 0]]).T
-
 GREY_TRANSFORM = np.array([0.299, 0.587, 0.114])
-
-def transform_rgb_image(image):
-    rgb = np.tensordot(image, SAT_TRANSFORM, 1) / 2047
-    return rgb
-
-# TODO: refactor with convert_image.py
-def read_8band_tif(image_filename):
-    dataset = rasterio.open(image_filename)
-    if dataset.count == 8:
-        bands = [dataset.read(i) for i in range(1, 9)] # thanks for not indexing by 0
-        raw = np.stack(bands, axis=2)
-        return raw
-    # TODO: images from the original training set get read in as 1
-    # channel, 512x8 images by rasterio.  fixing it like this is
-    # pretty lazy.  should just transform the images in question.  or
-    # maybe this is a bug in rasterio?  i would think 512x512x8 should
-    # be read in as 512 channels of 512x8
-    if dataset.count == 1 and dataset.read(1).shape[1] == 8:
-        return io.imread(image_filename)
-    raise RuntimeError("%s is not an 8 band tif.  Has %d bands.  Unable to process" %
-                       (image_filename, dataset.count))
 
 def read_mask(mask_file):
     """
@@ -309,12 +285,12 @@ def read_mask(mask_file):
     elif len(candidates) > 1:
         raise RuntimeError("Multiple mask files found matching %s" % mask_file)
 
-    mask = io.imread(candidates[0])
+    mask = skimage.io.imread(candidates[0])
     mask[mask > 0] = 1
     return mask
 
 def read_rgb(rgb_file):
-    return io.imread(rgb_file)
+    return skimage.io.imread(rgb_file)
 
 
 def split_images(X, Y):
@@ -402,7 +378,7 @@ def read_images(data_type, image_path):
         # note: this image is used later when building heat maps
         # of the directory.  would need to re-read the image if
         # it is manipulated at all here.
-        img_m = read_8band_tif(image_filename)
+        img_m = image_utils.read_8band_tif(image_filename)
         _, base_name = os.path.split(image_filename) # filename -> 05.TIF
 
         if data_type == DataType.VILLAGE:
@@ -538,7 +514,7 @@ def washed_greyscale(image):
     Applies a greyscale transformation to an 8 channel image,
     then remaps it to be between 0.5 and 1.0 in each channel
     """
-    rgb_image = transform_rgb_image(image)
+    rgb_image = image_utils.transform_rgb_image(image)
     grey = np.tensordot(rgb_image, GREY_TRANSFORM, 1)
     grey = np.expand_dims(grey, axis=2)
     grey = grey - grey.min()
@@ -922,7 +898,7 @@ def main():
         # TODO: would need to save the best model or just reload it
         # if we ran training and wanted to use the best
         print("Running model on %s" % args.process_heat_map)
-        process_heat_map(model, read_8band_tif(args.process_heat_map),
+        process_heat_map(model, image_utils.read_8band_tif(args.process_heat_map),
                          display=True, save_filename=args.save_heat_map)
 
     if args.heat_map_dir or args.heat_map_save_dir:

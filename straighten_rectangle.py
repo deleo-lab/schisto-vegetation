@@ -132,7 +132,7 @@ if __name__ == '__main__':
     args = parse_args()
 
     base_file = os.path.normpath(args.base_file)
-    raw = {}
+    # TODO: use image_utils and check that this is a real .tif file
     raw = skimage.io.imread(base_file)
 
     original = parse_shape(args.shape)

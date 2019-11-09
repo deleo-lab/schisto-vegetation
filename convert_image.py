@@ -6,11 +6,7 @@ import numpy as np
 import rasterio
 from PIL import Image
 
-# Using the descriptions in the worldview pdf, try to roughly
-# make the channels correspond to visible light channels
-transform = np.array([[ 0,  0,  0,  0,  0,  1, 0, 0],
-                      [ 0,  0,  1,  0,  0,  0, 0, 0],
-                      [ 0,  1,  0,  0,  0,  0, 0, 0]]).T
+import image_utils
 
 def print_min_max(arr):
     """
@@ -20,26 +16,10 @@ def print_min_max(arr):
     for channel in range(arr.shape[2]):
         print(channel, np.min(arr[:, :, channel]), np.max(arr[:, :, channel]))
 
-def read_8band_tif(image_filename):
-    dataset = rasterio.open(image_filename)
-    if dataset.count == 8:
-        bands = [dataset.read(i) for i in range(1, 9)] # thanks for not indexing by 0
-        raw = np.stack(bands, axis=2)
-        return raw
-    # TODO: images from the original training set get read in as 1
-    # channel, 512x8 images by rasterio.  fixing it like this is
-    # pretty lazy.  should just transform the images in question.  or
-    # maybe this is a bug in rasterio?  i would think 512x512x8 should
-    # be read in as 512 channels of 512x8
-    if dataset.count == 1 and dataset.read(1).shape[1] == 8:
-        return io.imread(image_filename)
-    raise RuntimeError("%s is not an 8 band tif.  Has %d bands.  Unable to process" %
-                       (image_filename, dataset.count))
-
 def convert_image(path):
-    raw = read_8band_tif(path)
+    raw = image_utils.read_8band_tif(path)
     print_min_max(raw)
-    rgb = np.tensordot(raw, transform, 1) / 2047 * 255
+    rgb = image_utils.transform_rgb_image(raw) * 255
     if np.max(rgb) < 0.8 * 255:
         # Brighten up the image a bit, since these images are dark AF
         rgb = rgb / np.max(rgb) * 0.8 * 255
