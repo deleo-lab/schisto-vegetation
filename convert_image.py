@@ -47,7 +47,7 @@ def display_image(path, save_path=None):
     return im
 
 
-if __name__ == '__main__':
+def main():
     """
     A program to display and possibly convert satellite images.
 
@@ -61,6 +61,9 @@ if __name__ == '__main__':
     In that case, each image in the directory will be converted.  
     Images will not be displayed.
     """
+    if len(sys.argv) < 1:
+        print("Please include a filename or directory to convert from 8 band tif to RGB")
+        return
     path = sys.argv[1]
     if os.path.isdir(path):
         if len(sys.argv) == 2:
@@ -78,3 +81,6 @@ if __name__ == '__main__':
         if len(sys.argv) > 2:
             save_path = sys.argv[2]
             im.save(save_path)
+
+if __name__ == '__main__':
+    main()
