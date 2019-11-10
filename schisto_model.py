@@ -731,8 +731,11 @@ def parse_args():
     parser.add_argument('--train_dir', default=DEFAULT_DIR,
                         help='Where to get the training data')
     
+    parser.add_argument('--val_dir', default=None,
+                        help='Where to get the training data')
+    
     parser.add_argument('--test_dir', default=None,
-                        help='Where to get test data')
+                        help='Where to get val data.  If not set, will be split from the training data')
 
     args = parser.parse_args()
     return args
@@ -867,7 +870,11 @@ def main():
     Sample command to test a model:
       python schisto_model.py --load_model softmax.h5 --no_train --test_dir ../extra_set_trans
 
+    Sample command to train a village model:
       python -u schisto_model.py --save_model village.h5 --train_dir ../village_set --model_type village --val_patches
+
+    Same thing, but with a separate val dir:
+      python -u schisto_model.py --save_model village.h5 --train_dir ../village_set --model_type village --val_dir ../village_val_set
 
     """
     args = parse_args()
@@ -921,7 +928,11 @@ def main():
 
     if args.train:
         X, Y = read_images(data_type, args.train_dir)
-        train_set, val_set = split_images(X, Y)
+        if args.val_dir:
+            train_set = (X, Y)
+            val_set = read_images(data_type, args.val_dir)
+        else:
+            train_set, val_set = split_images(X, Y)
         train(model, args.save_model, train_set, val_set, args)
 
     if args.process_heat_map:
