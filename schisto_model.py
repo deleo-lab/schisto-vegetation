@@ -769,7 +769,15 @@ def pretty_confusion(confusion):
     for i, line in enumerate(lines):
         new_lines.append(text[i] + ' ' + line)
     return "\n".join(new_lines)
-    
+
+def get_model_num_classes(model):
+    """
+    Return the number of classes in the model by looking at its output layer
+    """
+    output = model.outputs[0]
+    num_classes = output.shape[-1]
+    return num_classes
+
         
 def evaluate_dataset(model, data_type, test_dir):
     """
@@ -786,16 +794,22 @@ def evaluate_dataset(model, data_type, test_dir):
     #results = model.evaluate_generator(image_generator(test_set),
     #                                   steps=len(test_set[0]))
     #print('test loss, test_acc:', results)
-    confusion = None
+    confusion = np.array([[0]])
     for X, Y_true in image_generator(test_set):
         Y_pred = predict_single_image(model, X)
         axis = len(Y_true.shape) - 1
         Y_pred = np.argmax(Y_pred, axis=axis)
         Y_true = np.argmax(Y_true, axis=axis)
-        if confusion is None:
-            confusion = sklearn.metrics.confusion_matrix(Y_true.flatten(), Y_pred.flatten())
-        else:
-            confusion = confusion + sklearn.metrics.confusion_matrix(Y_true.flatten(), Y_pred.flatten())
+        image_confusion = sklearn.metrics.confusion_matrix(Y_true.flatten(), Y_pred.flatten())
+        if image_confusion.shape[0] > confusion.shape[0]:
+            new_confusion = np.zeros_like(image_confusion)
+            new_confusion[:confusion.shape[0], :confusion.shape[1]] = confusion
+            confusion = new_confusion
+        if confusion.shape[0] > image_confusion.shape[0]:
+            new_confusion = np.zeros_like(confusion)
+            new_confusion[:image_confusion.shape[0], :image_confusion.shape[1]] = image_confusion
+            image_confusion = new_confusion
+        confusion = confusion + image_confusion
     print(pretty_confusion(confusion))
     accuracy = np.sum(np.diag(confusion)) / np.sum(confusion)
     print("Overall accuracy: {}".format(accuracy))
@@ -861,10 +875,8 @@ def main():
 
     if args.load_model:
         model = tf.keras.models.load_model(args.load_model)
-        output = model.outputs[0]
-        num_classes = output.shape[-1]
         print("Loaded model %s.  Number of classes: %d" %
-              (args.load_model, num_classes))
+              (args.load_model, get_model_num_classes(model)))
         print("Model description: %s" % model.name)
         model_arch, data_type = model.name.split(":")[:2]
         model_arch = ModelArch[model_arch]
