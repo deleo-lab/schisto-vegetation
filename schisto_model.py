@@ -40,8 +40,8 @@ class ModelArch(Enum):
     CONV = 3
 
 PATCH_SZ = 256   # must be divisible by 16
-BATCH_SIZE = 8
-TRAIN_SZ = 50  # train size
+BATCH_SIZE = 32
+TRAIN_SZ = 128  # train size
 N_EPOCHS = 500  #150
 
 PATH_TIF = '%s/8_bands/'
