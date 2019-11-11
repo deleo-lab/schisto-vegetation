@@ -39,10 +39,9 @@ class ModelArch(Enum):
     PIXEL = 2
     CONV = 3
 
-PATCH_SZ = 256   # should divide by 16
+PATCH_SZ = 256   # must be divisible by 16
 BATCH_SIZE = 8
 TRAIN_SZ = 50  # train size
-VAL_SZ = 15   # validation size
 N_EPOCHS = 500  #150
 
 PATH_TIF = '%s/8_bands/'
@@ -495,7 +494,7 @@ def train(model, model_filename, train_set, val_set, args):
 
         x_train, y_train = get_patches(train_set, n_patches=TRAIN_SZ, sz=PATCH_SZ)
         if args.val_patches:
-            x_val, y_val = get_patches(val_set, n_patches=VAL_SZ, sz=PATCH_SZ)
+            x_val, y_val = get_patches(val_set, n_patches=args.num_val_patches, sz=PATCH_SZ)
         model.fit(x_train, y_train, batch_size=BATCH_SIZE,
                   epochs=1+i, initial_epoch=i,
                   verbose=2, #shuffle=True,
@@ -711,6 +710,10 @@ def parse_args():
     parser.add_argument('--no_val_patches', dest='val_patches',
                         action='store_false',
                         help="Use the entire block of validation data (default)")
+
+    parser.add_argument('--num_val_patches', type=int,
+                        default=20,
+                        help="When using patches, how many patches to extract from the val set")
 
     parser.add_argument('--save_best_only', dest='save_best_only',
                         default=True, action='store_true',
