@@ -534,7 +534,25 @@ def predict_single_image(model, image):
     else:
         batch = image
 
+    pad = 16 - batch.shape[1] % 16
+    if pad == 16: pad = 0
+    x_pad = (pad // 2, pad - pad // 2)
+    x_unpad = (x_pad[0], batch.shape[1] + x_pad[0])
+
+    pad = 16 - batch.shape[2] % 16
+    if pad == 16: pad = 0
+    y_pad = (pad // 2, pad - pad // 2)
+    y_unpad = (y_pad[0], batch.shape[2] + y_pad[0])
+
+    # between this and the same padding, the edges are going to get
+    # some really fuzzy predictions
+    # another option would be to chop the image into 4 overlapping
+    # corners which each have the right size, then stitch them back
+    # together after the prediction
+    batch = np.pad(batch, ((0, 0), x_pad, y_pad, (0, 0)), 'reflect')
+
     prediction = model.predict(batch)
+    prediction = prediction[:, x_unpad[0]:x_unpad[1], y_unpad[0]:y_unpad[1], :]
 
     if len(image.shape) == 3:
         prediction = np.squeeze(prediction)
@@ -767,7 +785,7 @@ def pretty_confusion(confusion):
     confusion_text = "{}".format(confusion)
     lines = confusion_text.split('\n')
     if len(lines) < 4:
-        lines.extend(4 - len(lines))
+        lines.extend("" * (4 - len(lines)))
     text = "TRUE"
     if len(lines) > 4:
         text = text + ' ' * (len(lines) - 4)
@@ -872,6 +890,8 @@ def main():
 
     Sample command to test a model:
       python schisto_model.py --load_model softmax.h5 --no_train --test_dir ../extra_set_trans
+
+      python -u schisto_model.py --load_model village.h5 --no_train --test_dir ../village_set
 
     Sample command to train a village model:
       python -u schisto_model.py --save_model village.h5 --train_dir ../village_set --model_type village --val_patches
