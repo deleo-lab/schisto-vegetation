@@ -648,6 +648,16 @@ def process_heat_map(model, test_image, display, save_filename=None):
 
     return rgb
 
+
+def get_rgb_dir_name(in_dir):
+    candidates = glob.glob(in_dir + "/[rR][gG][bB]")
+    if len(candidates) == 1:
+        return candidates[0]
+    if len(candidates) > 1:
+        raise RuntimeError("There is more than 1 directory that looks like %s.  This is very confusing" % (in_dir + "/rgb"))
+    if len(candidates) == 0:
+        print("Could not find RGB files.")
+        return None
     
 def process_heat_map_set(model, data_type, in_dir, out_dir):
     if not os.path.exists(out_dir):
@@ -671,25 +681,26 @@ def process_heat_map_set(model, data_type, in_dir, out_dir):
         for i in range(1, Y[base_name].shape[2]):
             mask[:, :, i-1] += np.array(Y[base_name][:, :, i] * 255, dtype=np.int8)
 
-        rgb_name = os.path.join(in_dir, 'RGB', base_name)
-        rgb_files = glob.glob('%s.*' % rgb_name)
-        if len(rgb_files) == 1:
-            # also TODO: do this stacking for single heatmaps as well?
-            rgb = read_rgb(rgb_files[0])
-            rgb = np.array(rgb, dtype=np.int8)
-            gold = np.concatenate([rgb, mask], axis=1)
-            heat_map = np.concatenate([gold, heat_map], axis=0)
-        else:
-            if len(rgb_files) > 1:
-                print("Warning: more than one file matching %s.*" % rgb_name)
+        rgb_dir_name = get_rgb_dir_name(in_dir)
+        if rgb_dir_name:
+            rgb_name = os.path.join(rgb_dir_name, os.path.splitext(base_name)[0])
+            rgb_files = glob.glob('%s.*' % rgb_name)
+            if len(rgb_files) == 1:
+                # also TODO: do this stacking for single heatmaps as well?
+                rgb = read_rgb(rgb_files[0])
+                rgb = np.array(rgb, dtype=np.int8)
+                gold = np.concatenate([rgb, mask], axis=1)
+                heat_map = np.concatenate([gold, heat_map], axis=0)
             else:
-                print("Warning: no files matching %s.*" % rgb_name)
-            heat_map = np.concatenate([mask, heat_map], axis=1)
+                if len(rgb_files) > 1:
+                    print("Warning: more than one file matching %s.*" % rgb_name)
+                else:
+                    print("Warning: no files matching %s.*" % rgb_name)
+                heat_map = np.concatenate([mask, heat_map], axis=1)
 
         im = Image.fromarray(heat_map, "RGB")
         im.save(save_filename)
-            
-            
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Process some integers.')
@@ -887,6 +898,7 @@ def main():
       for the images.  Otherwise will use train_dir
 
       python schisto_model.py --load_model softmax.h5 --no_train --heat_map_save_dir heat_maps
+      python schisto_model.py --load_model village.h5 --no_train --heat_map_save_dir village_maps --heat_map_dir ../village_set
 
     Sample command to test a model:
       python schisto_model.py --load_model softmax.h5 --no_train --test_dir ../extra_set_trans
