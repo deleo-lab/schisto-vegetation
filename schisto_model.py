@@ -29,10 +29,12 @@ class DataType(Enum):
     HABITAT_SEPARATE = 1
     HABITAT_COMBINED = 2
     VILLAGE = 3
+    WA_VILLAGE = 4
 
 class ModelType(Enum):
     HABITAT = 1
     VILLAGE = 2
+    WA_VILLAGE = 3
 
 class ModelArch(Enum):
     UNET = 1
@@ -51,6 +53,7 @@ EMERGENT_MASK = '%s/emergent_mask/'
 CERA_MASK = '%s/cera_mask/'
 
 VILLAGE_MASK = '%s/village/'
+WA_MASK = '%s/wa/'
 
 STARTING_LR = 4e-5
 
@@ -384,6 +387,11 @@ def read_images(data_type, image_path):
             mask_village = read_mask(VILLAGE_MASK % image_path + base_name)
             mask_no_village = 1 - mask_village
             mask = np.stack([mask_no_village, mask_village], axis=2)
+        elif data_type == DataType.WA_VILLAGE:
+            mask_village = read_mask(VILLAGE_MASK % image_path + base_name)
+            mask_wa = read_mask(WA_MASK % image_path + base_name)
+            mask_other = 1 - mask_village - mask_wa
+            mask = np.stack([mask_other, mask_village, mask_wa], axis=2)
         elif data_type in (DataType.HABITAT_COMBINED, DataType.HABITAT_SEPARATE):
             #create 3d mask where each channel is the mask for a specific class
             mask_water = read_mask(WATER_MASK % image_path + base_name)
@@ -475,6 +483,8 @@ def train(model, data_type, model_filename, train_set, val_set, args):
         class_weight = [.8,.1,.3]
     elif data_type == DataType.VILLAGE:
         class_weight = [.1,.8]
+    elif data_type == DataType.WA_VILLAGE:
+        class_weight = [.1,.8,.8]
     else:
         raise RuntimeError("Unknown data type {} for choosing class weights".format(data_type))
 
@@ -917,6 +927,8 @@ def main():
     Same thing, but with a separate val dir:
       python -u schisto_model.py --save_model village.h5 --train_dir ../village_set --model_type village --val_dir ../village_val_set
 
+    Combined water & village:
+      python3 -u schisto_model.py --save_model wa_village.h5 --train_dir ../village_set --model_type wa_village --val_patches --num_val_patches 30
     """
     args = parse_args()
     print_args(args)
@@ -941,12 +953,18 @@ def main():
         elif data_type == DataType.VILLAGE:
             print("Model built to detect villages")
             args.model_type = ModelType.VILLAGE
+        elif data_type == DataType.WA_VILLAGE:
+            print("Model built to detect villages and water accesses")
+            args.model_type = ModelType.WA_VILLAGE
         else:
             raise ValueError("Unable to determine data type to use: %s" % data_type.name)
     else:
         if args.model_type == ModelType.VILLAGE:
             num_classes = 2
             data_type = DataType.VILLAGE
+        elif args.model_type == ModelType.WA_VILLAGE:
+            num_classes = 3
+            data_type = DataType.WA_VILLAGE
         elif args.model_type == ModelType.HABITAT and args.separate_ceratophyllum:
             num_classes = 4
             data_type = DataType.HABITAT_SEPARATE
