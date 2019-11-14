@@ -467,12 +467,18 @@ def stack_dataset(dataset):
     return np.stack(X), np.stack(Y)
     
 
-def train(model, model_filename, train_set, val_set, args):
+def train(model, data_type, model_filename, train_set, val_set, args):
     # upweight ceratophyllum
-    if args.separate_ceratophyllum:
+    if data_type == DataType.HABITAT_SEPARATE:
         class_weight = [.8,.3,.1,.3]
-    else:
+    elif data_type == DataType.HABITAT_COMBINED:
         class_weight = [.8,.1,.3]
+    elif data_type == DataType.VILLAGE:
+        class_weight = [.1,.8]
+    else:
+        raise RuntimeError("Unknown data type {} for choosing class weights".format(data_type))
+
+    print("Using class weights: {}".format(class_weight))
 
     if not args.val_patches:
         # TODO: stack earlier?  we may not actually need
@@ -968,7 +974,7 @@ def main():
             val_set = read_images(data_type, args.val_dir)
         else:
             train_set, val_set = split_images(X, Y)
-        train(model, args.save_model, train_set, val_set, args)
+        train(model, data_type, args.save_model, train_set, val_set, args)
 
     if args.process_heat_map:
         # TODO: would need to save the best model or just reload it
