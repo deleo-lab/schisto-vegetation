@@ -719,7 +719,7 @@ def process_heat_map_set(model, data_type, in_dir, out_dir):
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description='Process some integers.')
+    parser = argparse.ArgumentParser(description='Train and/or run a segmentation model.')
     parser.add_argument('--save_model', default="unet_3cW_0.h5",
                         help='Filename for saving the model')
     parser.add_argument('--load_model', default=None,
