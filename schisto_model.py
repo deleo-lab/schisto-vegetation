@@ -511,13 +511,13 @@ def train(model, data_type, model_filename, train_set, val_set, args):
         x_train, y_train = get_patches(train_set, n_patches=TRAIN_SZ, sz=PATCH_SZ)
         if args.val_patches:
             x_val, y_val = get_patches(val_set, n_patches=args.num_val_patches, sz=PATCH_SZ)
+        # TODO: use the class_weights.  tensorflow 2.2 doesn't work like this
         model.fit(x_train, y_train, batch_size=BATCH_SIZE,
                   epochs=1+i, initial_epoch=i,
                   verbose=2, #shuffle=True,
                   #callbacks=[model_checkpoint, csv_logger, tensorboard],
                   callbacks=[model_checkpoint],
-                  validation_data=(x_val, y_val),
-                  class_weight=class_weight)
+                  validation_data=(x_val, y_val)) # class_weight=class_weight)
         del x_train, y_train
         print ("Finished epoch %d" % (i+1))
 
@@ -974,7 +974,7 @@ def main():
         else:
             raise RuntimeError("Unknown model type %s" % args.model_type.name)
 
-        model_name = args.model_arch.name + ":" + data_type.name
+        model_name = args.model_arch.name + "_" + data_type.name
         print("Model description: %s" % model_name)
         if args.model_arch == ModelArch.UNET:
             model = unet(STARTING_LR, num_classes, model_name)
