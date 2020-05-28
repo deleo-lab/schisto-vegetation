@@ -504,7 +504,7 @@ def train(model, data_type, model_filename, train_set, val_set, args):
     model_checkpoint = ModelCheckpoint(checkpoint_filename, monitor='val_loss',
                                        save_best_only=args.save_best_only)
     
-    for i in range(0, N_EPOCHS):
+    for i in range(0, args.num_epochs):
         #csv_logger = CSVLogger('log_unet.csv', append=True, separator=';')
         #tensorboard = TensorBoard(log_dir='./tensorboard_unet/', write_graph=True, write_images=True)
 
@@ -785,6 +785,11 @@ def parse_args():
     parser.add_argument('--test_dir', default=None,
                         help='Where to get val data.  If not set, will be split from the training data')
 
+    parser.add_argument('--seed', default=None, type=int,
+                        help='Random seed to use.  If set to None, a random seed will be chosen')
+    parser.add_argument('--num_epochs', default=500, type=int,
+                        help='Number of epochs for running training')
+
     args = parser.parse_args()
     return args
 
@@ -885,6 +890,11 @@ def choose_heat_map_save_dir(args):
         return candidate
     return None
 
+def set_random_seed(seed):
+    random.seed(seed)
+    np.random.seed(seed)
+    tf.random.set_seed(seed)
+
 def main():
     """Load a model or create a model with random weights.
     Then possibly train it.
@@ -931,6 +941,12 @@ def main():
       python3 -u schisto_model.py --save_model wa_village.h5 --train_dir ../village_set --model_type wa_village --val_patches --num_val_patches 30
     """
     args = parse_args()
+
+    if args.seed is None:
+        args.seed = random.randint(1, 1000000000)
+        print("Setting random seed to {}".format(args.seed))
+    set_random_seed(args.seed)
+
     print_args(args)
 
     if args.load_model:
