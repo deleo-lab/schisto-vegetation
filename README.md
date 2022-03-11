@@ -1,6 +1,8 @@
 # schisto-vegetation
 Building deep learning applications to combat Schistosomiasis
 
+[updates: with our paper got accepted, this repo is going to be updated by the end of March]
+
 The main contribution of this repo is schisto_model.py, which builds
 and runs a u-net for recognizing snail habitat in satellite images of
 Senegal.  The script should contain sufficient information on how to
